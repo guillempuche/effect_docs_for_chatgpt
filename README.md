@@ -1,4 +1,4 @@
-# Generating PDF Documentation for Effect Website with Deno
+# EffectJS Documentation PDF Generator for ChatGPT
 
 This guide explains how to create a PDF from the Markdown documentation of the Effect Website, using the Deno PDF generator from your repository.
 
