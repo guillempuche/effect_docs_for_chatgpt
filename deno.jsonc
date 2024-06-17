@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "deno.ns",
+      "deno.unstable"
+    ]
+  },
+  "imports": {
+    "std/": "https://deno.land/std/",
+    "markdown-it": "https://cdn.skypack.dev/markdown-it",
+    "puppeteer": "https://deno.land/x/puppeteer@16.2.0/mod.ts",
+    "front-matter": "https://deno.land/std/front_matter/yaml.ts"
+  },
+  "lint": {
+    "rules": {
+      "tags": [
+        "recommended"
+      ]
+    }
+  },
+  "fmt": {
+    "options": {
+      "useTabs": false,
+      "lineWidth": 80,
+      "indentWidth": 2,
+      "singleQuote": true,
+      "proseWrap": "preserve"
+    }
+  },
+  "tasks": {
+    "generate-pdf": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run generate_pdf.ts",
+    "lint": "deno lint",
+    "format": "deno fmt"
+  }
+}
