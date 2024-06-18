@@ -1,4 +1,4 @@
-# EffectJS Documentation PDF Generator for ChatGPT
+# Effect Documentation PDF Generator for ChatGPT
 
 This guide explains how to create a PDF from the Markdown documentation of the Effect Website, using the Deno PDF generator from your repository.
 
@@ -19,7 +19,7 @@ git clone https://github.com/Effect-TS/website.git
 Next, in the same directory where you cloned the Effect Website, clone your Deno PDF generator repository:
 
 ```bash
-git clone https://github.com/guillempuche/effectjs_docs_for_chatgpt.git
+git clone https://github.com/guillempuche/effect_docs_for_chatgpt.git
 ```
 
 Your directory structure should now look something like this:
@@ -27,7 +27,7 @@ Your directory structure should now look something like this:
 ```
 /some-folder
 |-- /website
-|-- /effectjs_docs_for_chatgpt
+|-- /effect_docs_for_chatgpt
 ```
 
 ## Usage
@@ -35,7 +35,7 @@ Your directory structure should now look something like this:
 Navigate to the Deno PDF generator directory and run the following command:
 
 ```bash
-cd effectjs_docs_for_chatgpt
+cd effect_docs_for_chatgpt
 deno task generate-pdf ../website/content/docs documentation.pdf
 ```
 
