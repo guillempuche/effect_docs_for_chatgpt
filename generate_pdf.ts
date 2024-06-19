@@ -95,8 +95,8 @@ async function generateOutputFromRepos(
       const packageDir = dirname(relative(repoDirPath, exampleDir));
       const packageName = basename(packageDir);
       const tsFiles = await readTsExamples(exampleDir);
-      console.debug('packageName ', packageName);
       const formattedTsContent = formatTsContent(packageName, tsFiles, format);
+      
       if (format === 'pdf') {
         const adjustedFormattedContent = adjustHeaderLevelsHtml(
           formattedTsContent,
