@@ -10,10 +10,11 @@ This guide explains how to create a PDF from the Markdown documentation of the E
 
 ### Clone the Necessary Repositories
 
-First, clone the Effect Website repository:
+First, clone the Effect Website and Effect Github repositories:
 
 ```bash
 git clone https://github.com/Effect-TS/website.git
+git clone https://github.com/Effect-TS/effect.git
 ```
 
 Next, in the same directory where you cloned the Effect Website, clone your Deno PDF generator repository:
@@ -28,6 +29,7 @@ Your directory structure should now look something like this:
 /some-folder
 |-- /website
 |-- /effect_docs_for_chatgpt
+|-- /effect
 ```
 
 ## Usage
@@ -36,17 +38,17 @@ Navigate to the Deno PDF generator directory and run the following command:
 
 ```bash
 cd effect_docs_for_chatgpt
-deno task generate-pdf ../website/content/docs documentation.pdf
+deno task generate-pdf ../website/content/docs ../effect documentation.pdf
 ```
 
-This command will convert the Markdown files found in the `../website/content/docs` directory into a single PDF file named `documentation.pdf`.
+This command will convert the Markdown files found in the `../website/content/docs` directory and include content from the `../effect` repository into a single PDF file named `documentation.pdf`.
 
 ## Example Command
 
-If both repositories are cloned under your home directory, the command would look like this:
+If all repositories are cloned under your home directory, the command would look like this:
 
 ```bash
-deno task generate-pdf ~/website/content/docs documentation.pdf
+deno task generate-pdf ~/website/content/docs ~/effect documentation.pdf
 ```
 
 ## Additional Commands
