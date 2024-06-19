@@ -54,16 +54,46 @@ export function convertMarkdownToHTML(markdownContent: string): string {
   return md.render(cleanContent);
 }
 
+export function adjustHeaderLevelsHtml(htmlContent: string): string {
+  return htmlContent
+    .replace(/<h1>/g, '<h2>')
+    .replace(/<\/h1>/g, '</h2>')
+    .replace(/<h2>/g, '<h3>')
+    .replace(/<\/h2>/g, '</h3>')
+    .replace(/<h3>/g, '<h4>')
+    .replace(/<\/h3>/g, '</h3>')
+    .replace(/<h4>/g, '<h5>')
+    .replace(/<\/h4>/g, '</h5>')
+    .replace(/<h5>/g, '<h6>')
+    .replace(/<\/h5>/g, '</h6>');
+}
+
+export function adjustHeaderLevelsMarkdown(markdownContent: string): string {
+  return markdownContent
+    .replace(/^# /gm, '## ')
+    .replace(/^## /gm, '### ')
+    .replace(/^### /gm, '#### ')
+    .replace(/^#### /gm, '##### ')
+    .replace(/^##### /gm, '###### ');
+}
+
 // Function to format TypeScript content into markdown
 export function formatTsContent(
   packageName: string,
-  files: { path: string; content: string }[],
+  tsFiles: { path: string; content: string }[],
+  format: 'pdf' | 'md',
 ): string {
-  let formattedContent = `## ${packageName}\n`;
-  for (const file of files) {
-    formattedContent += `### ${basename(file.path)}\n`;
-    formattedContent += '```typescript\n' + file.content + '\n```\n';
+  let formattedContent = format === 'pdf'
+    ? `<h1>${packageName}</h1>`
+    : `# ${packageName}\n\n`;
+
+  for (const file of tsFiles) {
+    const fileName = basename(file.path);
+    formattedContent += format === 'pdf'
+      ? `<h2>${fileName}</h2><pre><code>${file.content}</code></pre>`
+      : `## ${fileName}\n\n\`\`\`typescript\n${file.content}\n\`\`\`\n\n`;
   }
+
   return formattedContent;
 }
 

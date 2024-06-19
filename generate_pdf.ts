@@ -1,14 +1,27 @@
-import { basename, extname, relative } from 'std/path/mod.ts';
+import { basename, dirname, extname, relative } from 'std/path/mod.ts';
 import puppeteer from 'puppeteer';
 import { extract } from 'front-matter';
 
 import {
+  adjustHeaderLevelsHtml,
+  adjustHeaderLevelsMarkdown,
   convertMarkdownToHTML,
   findExampleDirs,
   formatTsContent,
   readMarkdownFiles,
   readTsExamples,
 } from './utils.ts';
+
+// List of README paths in the Effect repo
+const effectReadmePaths = [
+  'packages/cli/README.md',
+  'packages/platform/README.md',
+  'packages/printer/README.md',
+  'packages/schema/README.md',
+  'packages/sql/README.md',
+  'packages/typeclass/README.md',
+  'packages/vitest/README.md',
+];
 
 // Function to generate PDF from HTML content
 async function generatePDF(
@@ -44,33 +57,6 @@ async function generateOutputFromRepos(
   const markdownFiles = await readMarkdownFiles(docsDirPath);
   let combinedContent = '';
 
-  // Process markdown files from docs directory
-  for (const file of markdownFiles) {
-    const { body, attrs } = extract(file.content);
-    const title = attrs.title
-      ? `<h1>${attrs.title}</h1>`
-      : `<h1>${basename(file.path)}</h1>`;
-    const relativePath = `<p><em>Location: ${
-      relative(docsDirPath, file.path).replace(extname(file.path), '')
-    }</em></p>`;
-    const excerpt = attrs.excerpt ? `<p><em>${attrs.excerpt}</em></p>` : '';
-    const htmlContent = convertMarkdownToHTML(body);
-    combinedContent += format === 'pdf'
-      ? title + relativePath + excerpt + htmlContent
-      : `# ${attrs.title || basename(file.path)}\n\n${file.content}\n\n`;
-  }
-
-  // List of README paths in the Effect repo
-  const effectReadmePaths = [
-    'packages/cli/README.md',
-    'packages/platform/README.md',
-    'packages/printer/README.md',
-    'packages/schema/README.md',
-    'packages/sql/README.md',
-    'packages/typeclass/README.md',
-    'packages/vitest/README.md',
-  ];
-
   // Function to process content from a repo. First README guides, then examples Typescript files.
   async function processRepoContent(
     repoDirPath: string,
@@ -85,10 +71,19 @@ async function generateOutputFromRepos(
       const fullPath = `${repoDirPath}/${readmePath}`;
       try {
         const readmeContent = await Deno.readTextFile(fullPath);
-        combinedContent += format === 'pdf'
-          ? `<h1>${basename(readmePath)}</h1>` +
-            convertMarkdownToHTML(readmeContent)
-          : `# ${basename(readmePath)}\n\n${readmeContent}\n\n`;
+        if (format === 'pdf') {
+          const htmlContent = convertMarkdownToHTML(readmeContent);
+          const adjustedHtmlContent = adjustHeaderLevelsHtml(htmlContent);
+          combinedContent += `<h1>${basename(readmePath)}</h1>` +
+            adjustedHtmlContent;
+        } else {
+          const adjustedMarkdownContent = adjustHeaderLevelsMarkdown(
+            readmeContent,
+          );
+          combinedContent += `# ${
+            basename(readmePath)
+          }\n\n${adjustedMarkdownContent}\n\n`;
+        }
       } catch (error) {
         console.error(`Error reading ${fullPath}:`, error);
       }
@@ -97,20 +92,53 @@ async function generateOutputFromRepos(
     const exampleDirs = await findExampleDirs(`${repoDirPath}/packages`);
 
     for (const exampleDir of exampleDirs) {
-      const packageName = basename(relative(repoDirPath, exampleDir));
+      const packageDir = dirname(relative(repoDirPath, exampleDir));
+      const packageName = basename(packageDir);
       const tsFiles = await readTsExamples(exampleDir);
-      const formattedTsContent = formatTsContent(packageName, tsFiles);
-      combinedContent += format === 'pdf'
-        ? convertMarkdownToHTML(formattedTsContent)
-        : `# ${packageName} Examples\n\n${formattedTsContent}\n\n`;
+      console.debug('packageName ', packageName);
+      const formattedTsContent = formatTsContent(packageName, tsFiles, format);
+      if (format === 'pdf') {
+        const adjustedFormattedContent = adjustHeaderLevelsHtml(
+          formattedTsContent,
+        );
+        combinedContent += adjustedFormattedContent;
+      } else {
+        const adjustedFormattedContent = adjustHeaderLevelsMarkdown(
+          formattedTsContent,
+        );
+        combinedContent +=
+          `# ${packageName} Examples\n\n${adjustedFormattedContent}\n\n`;
+      }
     }
   }
 
-  // Process content from effect repo
-  await processRepoContent(effectDirPath, effectReadmePaths);
-
   // Process content from effect-http repo
   await processRepoContent(httpDirPath);
+
+  // Process content from Effect packages
+  await processRepoContent(effectDirPath, effectReadmePaths);
+
+  // Process markdown files from docs directory
+  for (const file of markdownFiles) {
+    const { body, attrs } = extract(file.content);
+    const title = attrs.title
+      ? `<h1>${attrs.title}</h1>`
+      : `<h1>${basename(file.path)}</h1>`;
+    const relativePath = `<p><em>Location: ${
+      relative(docsDirPath, file.path).replace(extname(file.path), '')
+    }</em></p>`;
+    const excerpt = attrs.excerpt ? `<p><em>${attrs.excerpt}</em></p>` : '';
+    if (format === 'pdf') {
+      const htmlContent = convertMarkdownToHTML(body);
+      const adjustedHtmlContent = adjustHeaderLevelsHtml(htmlContent);
+      combinedContent += title + relativePath + excerpt + adjustedHtmlContent;
+    } else {
+      const adjustedMarkdownContent = adjustHeaderLevelsMarkdown(body);
+      combinedContent += `# ${
+        attrs.title || basename(file.path)
+      }\n\n${adjustedMarkdownContent}\n\n`;
+    }
+  }
 
   // Generate the final output
   if (format === 'pdf') {
@@ -130,9 +158,9 @@ const format = Deno.args[3] || 'pdf';
 const outputFileName = Deno.args[4] || 'documentation';
 const outputPath = `${outputFileName}.${format}`;
 
-if (!docsDirPath || !effectDirPath || !httpDirPath || !format) {
+if (!docsDirPath || !effectDirPath || !httpDirPath) {
   console.error(
-    'Please provide the paths to the directories containing website markdown files, effect repo, effect-http repo, and the output format (pdf or md).',
+    'Please provide the paths to the directories containing website markdown files, effect repo, and effect-http repo.',
   );
   Deno.exit(1);
 }
