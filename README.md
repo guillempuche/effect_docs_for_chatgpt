@@ -1,6 +1,6 @@
-# Effect Documentation PDF Generator for ChatGPT
+# Effect Documentation PDF and Markdown Generator for ChatGPT
 
-This guide explains how to create a PDF from the Markdown documentation of the Effect Website, using the Deno PDF generator from your repository.
+This guide explains how to create a PDF or markdown file from the Effect documentation, README guides, and examples.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ git clone https://github.com/guillempuche/effect_docs_for_chatgpt.git
 
 Your directory structure should now look something like this:
 
-```
+```txt
 /some-folder
 |-- /effect_docs_for_chatgpt
 |-- /effect
@@ -40,17 +40,19 @@ Navigate to the Deno PDF generator directory and run the following command:
 
 ```bash
 cd effect_docs_for_chatgpt
-deno task generate-pdf ../website/content/docs ../effect ../effect-http pdf_filename
+deno task generate-pdf <docsDirPath> <effectDirPath> <httpDirPath> [format:pdf|md] [outputFileName]
 ```
 
-This command will convert the Markdown files found in the `../website/content/docs` directory and include content from the `../effect` repository into a single PDF file named `documentation`. The last argument, the document name, is optional.
+This command will convert the Markdown files found in the `../website/content/docs` directory and include content from the `../effect` repository into a single PDF or Markdown file named `documentation`. The last format and the document name arguments are optional.
 
 ## Example Command
 
 If all repositories are cloned under your home directory, the command would look like this:
 
 ```bash
-deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http documentation
+deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http md output <-- It will generate "output.md"
+deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http pdf <-- It will generate "documentation.pdf"
+deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http <-- It will generate "documentation.pdf"
 ```
 
 ## Additional Commands
