@@ -1901,6 +1901,12 @@ For a more detailed walkthrough, take a read through the [Tutorial](#tutorial) b
 
 Here's a breakdown of the key built-in options available in `@effect/cli`:
 
+- **Log Level (`[--log-level]`)**:
+
+  - **Description**: Sets the **minimum** log level for a `Command`'s handler method
+  - **Usage**: `--log-level (all | trace | debug | info | warning | error | fatal | none)`
+  - **Functionality**: Allows you to specify the **minimum** log level for a `Command`'s handler method. By setting this option, you can control the verbosity of the log output, ensuring that only logs of a certain priority or higher are output by your program.
+
 - **Shell Completions (`[--completions]`)**:
 
   - **Description**: Automatically generates shell completion scripts to enhance user experience. Shell completions suggest possible command options when you type a command and hit the tab key.
@@ -3483,13 +3489,17 @@ In this example:
 In this section, we'll explore how to retrieve data using the `HttpClient` module from `@effect/platform`.
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const getPostAsJson = Http.request
-  .get("https://jsonplaceholder.typicode.com/posts/1")
-  .pipe(Http.client.fetch, Http.response.json)
+const getPostAsJson = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/posts/1"
+).pipe(HttpClient.fetch, HttpClientResponse.json)
 
 NodeRuntime.runMain(
   getPostAsJson.pipe(Effect.andThen((post) => Console.log(typeof post, post)))
@@ -3508,18 +3518,22 @@ object {
 */
 ```
 
-If you want a response in a different format other than JSON, you can utilize other APIs provided by `Http.response`.
+If you want a response in a different format other than JSON, you can utilize other APIs provided by `HttpClientResponse`.
 
 In the following example, we fetch the post as text:
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const getPostAsText = Http.request
-  .get("https://jsonplaceholder.typicode.com/posts/1")
-  .pipe(Http.client.fetch, Http.response.text)
+const getPostAsText = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/posts/1"
+).pipe(HttpClient.fetch, HttpClientResponse.text)
 
 NodeRuntime.runMain(
   getPostAsText.pipe(Effect.andThen((post) => Console.log(typeof post, post)))
@@ -3540,34 +3554,37 @@ string {
 
 Here are some APIs you can use to convert the response:
 
-| **API**                       | **Description**                       |
-| ----------------------------- | ------------------------------------- |
-| `Http.response.arrayBuffer`   | Convert to `ArrayBuffer`              |
-| `Http.response.formData`      | Convert to `FormData`                 |
-| `Http.response.json`          | Convert to JSON                       |
-| `Http.response.stream`        | Convert to a `Stream` of `Uint8Array` |
-| `Http.response.text`          | Convert to text                       |
-| `Http.response.urlParamsBody` | Convert to `Http.urlParams.UrlParams` |
+| **API**                            | **Description**                       |
+| ---------------------------------- | ------------------------------------- |
+| `HttpClientResponse.arrayBuffer`   | Convert to `ArrayBuffer`              |
+| `HttpClientResponse.formData`      | Convert to `FormData`                 |
+| `HttpClientResponse.json`          | Convert to JSON                       |
+| `HttpClientResponse.stream`        | Convert to a `Stream` of `Uint8Array` |
+| `HttpClientResponse.text`          | Convert to text                       |
+| `HttpClientResponse.urlParamsBody` | Convert to `Http.urlParams.UrlParams` |
 
 ###### Setting Headers
 
 When making HTTP requests, sometimes you need to include additional information in the request headers. You can set headers using the `setHeader` function for a single header or `setHeaders` for multiple headers simultaneously.
 
 ```ts
-import * as Http from "@effect/platform/HttpClient"
+import { HttpClient, HttpClientRequest } from "@effect/platform"
 
-const getPost = Http.request
-  .get("https://jsonplaceholder.typicode.com/posts/1")
-  .pipe(
-    // Setting a single header
-    Http.request.setHeader("Content-type", "application/json; charset=UTF-8"),
-    // Setting multiple headers
-    Http.request.setHeaders({
-      "Content-type": "application/json; charset=UTF-8",
-      Foo: "Bar"
-    }),
-    Http.client.fetch
-  )
+const getPost = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/posts/1"
+).pipe(
+  // Setting a single header
+  HttpClientRequest.setHeader(
+    "Content-type",
+    "application/json; charset=UTF-8"
+  ),
+  // Setting multiple headers
+  HttpClientRequest.setHeaders({
+    "Content-type": "application/json; charset=UTF-8",
+    Foo: "Bar"
+  }),
+  HttpClient.fetch
+)
 ```
 
 ###### Decoding Data with Schemas
@@ -3575,8 +3592,12 @@ const getPost = Http.request
 A common use case when fetching data is to validate the received format. For this purpose, the `HttpClient` module is integrated with `@effect/schema`.
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Schema } from "@effect/schema"
 import { Console, Effect } from "effect"
 
@@ -3591,13 +3612,13 @@ const getPostAndValidate: Effect.Effect<{
     readonly title: string;
 }, Http.error.HttpClientError | ParseError, never>
 */
-const getPostAndValidate = Http.request
-  .get("https://jsonplaceholder.typicode.com/posts/1")
-  .pipe(
-    Http.client.fetch,
-    Effect.andThen(Http.response.schemaBodyJson(Post)),
-    Effect.scoped
-  )
+const getPostAndValidate = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/posts/1"
+).pipe(
+  HttpClient.fetch,
+  Effect.andThen(HttpClientResponse.schemaBodyJson(Post)),
+  Effect.scoped
+)
 
 NodeRuntime.runMain(getPostAndValidate.pipe(Effect.andThen(Console.log)))
 /*
@@ -3609,26 +3630,30 @@ Output:
 */
 ```
 
-In this example, we define a schema for a post object with properties `id` and `title`. Then, we fetch the data and validate it against this schema using `Http.response.schemaBodyJson`. Finally, we log the validated post object.
+In this example, we define a schema for a post object with properties `id` and `title`. Then, we fetch the data and validate it against this schema using `HttpClientResponse.schemaBodyJson`. Finally, we log the validated post object.
 
 Note that we use `Effect.scoped` after consuming the response. This ensures that any resources associated with the HTTP request are properly cleaned up once we're done processing the response.
 
 ###### Filtering And Error Handling
 
-It's important to note that `Http.client.fetch` doesn't consider non-`200` status codes as errors by default. This design choice allows for flexibility in handling different response scenarios. For instance, you might have a schema union where the status code serves as the discriminator, enabling you to define a schema that encompasses all possible response cases.
+It's important to note that `HttpClient.fetch` doesn't consider non-`200` status codes as errors by default. This design choice allows for flexibility in handling different response scenarios. For instance, you might have a schema union where the status code serves as the discriminator, enabling you to define a schema that encompasses all possible response cases.
 
-You can use `Http.client.filterStatusOk`, or `Http.client.fetchOk` to ensure only `2xx` responses are treated as successes.
+You can use `HttpClient.filterStatusOk`, or `HttpClient.fetchOk` to ensure only `2xx` responses are treated as successes.
 
 In this example, we attempt to fetch a non-existent page and don't receive any error:
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const getText = Http.request
-  .get("https://jsonplaceholder.typicode.com/non-existing-page")
-  .pipe(Http.client.fetch, Http.response.text)
+const getText = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/non-existing-page"
+).pipe(HttpClient.fetch, HttpClientResponse.text)
 
 NodeRuntime.runMain(getText.pipe(Effect.andThen(Console.log)))
 /*
@@ -3637,66 +3662,81 @@ Output:
 */
 ```
 
-However, if we use `Http.client.filterStatusOk`, an error is logged:
+However, if we use `HttpClient.filterStatusOk`, an error is logged:
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const getText = Http.request
-  .get("https://jsonplaceholder.typicode.com/non-existing-page")
-  .pipe(Http.client.filterStatusOk(Http.client.fetch), Http.response.text)
+const getText = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/non-existing-page"
+).pipe(HttpClient.filterStatusOk(HttpClient.fetch), HttpClientResponse.text)
 
 NodeRuntime.runMain(getText.pipe(Effect.andThen(Console.log)))
 /*
 Output:
-timestamp=2024-03-25T10:21:16.972Z level=ERROR fiber=#0 cause="ResponseError: StatusCode error (404 GET https://jsonplaceholder.typicode.com/non-existing-page): non 2xx status code
+timestamp=... level=ERROR fiber=#0 cause="ResponseError: StatusCode error (404 GET https://jsonplaceholder.typicode.com/non-existing-page): non 2xx status code
+    ... stack trace ...
 */
 ```
 
-Note that you can use `Http.client.fetchOk` as a shortcut for `Http.client.filterStatusOk(Http.client.fetch)`:
+Note that you can use `HttpClient.fetchOk` as a shortcut for `HttpClient.filterStatusOk(HttpClient.fetch)`:
 
 ```ts
-const getText = Http.request
-  .get("https://jsonplaceholder.typicode.com/non-existing-page")
-  .pipe(Http.client.fetchOk, Http.response.text)
+const getText = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/non-existing-page"
+).pipe(HttpClient.fetchOk, HttpClientResponse.text)
 ```
 
-You can also create your own status-based filters. In fact, `Http.client.filterStatusOk` is just a shortcut for the following filter:
+You can also create your own status-based filters. In fact, `HttpClient.filterStatusOk` is just a shortcut for the following filter:
 
 ```ts
-const getText = Http.request
-  .get("https://jsonplaceholder.typicode.com/non-existing-page")
-  .pipe(
-    Http.client.filterStatus(
-      Http.client.fetch,
-      (status) => status >= 200 && status < 300
-    ),
-    Http.response.text
-  )
+const getText = HttpClientRequest.get(
+  "https://jsonplaceholder.typicode.com/non-existing-page"
+).pipe(
+  HttpClient.filterStatus(
+    HttpClient.fetch,
+    (status) => status >= 200 && status < 300
+  ),
+  HttpClientResponse.text
+)
+
+/*
+Output:
+timestamp=... level=ERROR fiber=#0 cause="ResponseError: StatusCode error (404 GET https://jsonplaceholder.typicode.com/non-existing-page): invalid status code
+    ... stack trace ...
+*/
 ```
 
 ###### POST
 
-To make a POST request, you can use the `Http.request.post` function provided by the `HttpClient` module. Here's an example of how to create and send a POST request:
+To make a POST request, you can use the `HttpClientRequest.post` function provided by the `HttpClient` module. Here's an example of how to create and send a POST request:
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const addPost = Http.request
-  .post("https://jsonplaceholder.typicode.com/posts")
-  .pipe(
-    Http.request.jsonBody({
-      title: "foo",
-      body: "bar",
-      userId: 1
-    }),
-    Effect.andThen(Http.client.fetch),
-    Http.response.json
-  )
+const addPost = HttpClientRequest.post(
+  "https://jsonplaceholder.typicode.com/posts"
+).pipe(
+  HttpClientRequest.jsonBody({
+    title: "foo",
+    body: "bar",
+    userId: 1
+  }),
+  Effect.andThen(HttpClient.fetch),
+  HttpClientResponse.json
+)
 
 NodeRuntime.runMain(addPost.pipe(Effect.andThen(Console.log)))
 /*
@@ -3705,29 +3745,33 @@ Output:
 */
 ```
 
-If you need to send data in a format other than JSON, such as plain text, you can use different APIs provided by `Http.request`.
+If you need to send data in a format other than JSON, such as plain text, you can use different APIs provided by `HttpClientRequest`.
 
 In the following example, we send the data as text:
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Console, Effect } from "effect"
 
-const addPost = Http.request
-  .post("https://jsonplaceholder.typicode.com/posts")
-  .pipe(
-    Http.request.textBody(
-      JSON.stringify({
-        title: "foo",
-        body: "bar",
-        userId: 1
-      }),
-      "application/json; charset=UTF-8"
-    ),
-    Http.client.fetch,
-    Http.response.json
-  )
+const addPost = HttpClientRequest.post(
+  "https://jsonplaceholder.typicode.com/posts"
+).pipe(
+  HttpClientRequest.textBody(
+    JSON.stringify({
+      title: "foo",
+      body: "bar",
+      userId: 1
+    }),
+    "application/json; charset=UTF-8"
+  ),
+  HttpClient.fetch,
+  HttpClientResponse.json
+)
 
 NodeRuntime.runMain(Effect.andThen(addPost, Console.log))
 /*
@@ -3741,8 +3785,12 @@ Output:
 A common use case when fetching data is to validate the received format. For this purpose, the `HttpClient` module is integrated with `@effect/schema`.
 
 ```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
 import { NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpClient"
 import { Schema } from "@effect/schema"
 import { Console, Effect } from "effect"
 
@@ -3751,24 +3799,57 @@ const Post = Schema.Struct({
   title: Schema.String
 })
 
-const addPost = Http.request
-  .post("https://jsonplaceholder.typicode.com/posts")
-  .pipe(
-    Http.request.jsonBody({
-      title: "foo",
-      body: "bar",
-      userId: 1
-    }),
-    Effect.andThen(Http.client.fetch),
-    Effect.andThen(Http.response.schemaBodyJson(Post)),
-    Effect.scoped
-  )
+const addPost = HttpClientRequest.post(
+  "https://jsonplaceholder.typicode.com/posts"
+).pipe(
+  HttpClientRequest.jsonBody({
+    title: "foo",
+    body: "bar",
+    userId: 1
+  }),
+  Effect.andThen(HttpClient.fetch),
+  Effect.andThen(HttpClientResponse.schemaBodyJson(Post)),
+  Effect.scoped
+)
 
 NodeRuntime.runMain(addPost.pipe(Effect.andThen(Console.log)))
 /*
 Output:
 { id: 101, title: 'foo' }
 */
+```
+
+###### Testing
+
+###### Injecting Fetch
+
+To test HTTP requests, you can inject a mock fetch implementation.
+
+```ts
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse
+} from "@effect/platform"
+import { Effect, Layer } from "effect"
+import * as assert from "node:assert"
+
+// Mock fetch implementation
+const FetchTest = Layer.succeed(HttpClient.Fetch, () =>
+  Promise.resolve(new Response("not found", { status: 404 }))
+)
+
+// Program to test
+const program = HttpClientRequest.get("https://www.google.com/").pipe(
+  HttpClient.fetch,
+  HttpClientResponse.text
+)
+
+// Test
+Effect.gen(function* () {
+  const response = yield* program
+  assert.equal(response, "not found")
+}).pipe(Effect.provide(FetchTest), Effect.runPromise)
 ```
 
 ###### HTTP Server
@@ -3795,7 +3876,7 @@ This section provides a simplified explanation of key concepts within the `@effe
 
 ###### Applying Concepts
 
-These components are designed to work together in a modular and flexible way, allowing developers to build complex server applications with reusable components. Here’s how you might typically use these components in a project:
+These components are designed to work together in a modular and flexible way, allowing developers to build complex server applications with reusable components. Here's how you might typically use these components in a project:
 
 1. **Create Handlers**: Define functions that process specific types of requests (e.g., GET, POST) and return responses.
 
@@ -3814,27 +3895,24 @@ In this example, we will create a simple HTTP server that listens on port `3000`
 Node.js Example
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
 import { Layer } from "effect"
 import { createServer } from "node:http"
 
 // Define the router with a single route for the root URL
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 )
 
 // Set up the application server with logging
-const app = router.pipe(
-  HttpServer.server.serve(),
-  HttpServer.server.withLogAddress
-)
+const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress)
 
 // Specify the port
 const port = 3000
 
 // Create a server layer with the specified port
-const ServerLive = NodeHttpServer.server.layer(() => createServer(), { port })
+const ServerLive = NodeHttpServer.layer(() => createServer(), { port })
 
 // Run the application
 NodeRuntime.runMain(Layer.launch(Layer.provide(app, ServerLive)))
@@ -3846,31 +3924,28 @@ timestamp=... level=INFO fiber=#0 message="Listening on http://localhost:3000"
 ```
 
 > [!NOTE]
-> The `HttpServer.server.withLogAddress` middleware logs the address and port where the server is listening, helping to confirm that the server is running correctly and accessible on the expected endpoint.
+> The `HttpServer.withLogAddress` middleware logs the address and port where the server is listening, helping to confirm that the server is running correctly and accessible on the expected endpoint.
 
 Bun Example
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
 import { Layer } from "effect"
 
 // Define the router with a single route for the root URL
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 )
 
 // Set up the application server with logging
-const app = router.pipe(
-  HttpServer.server.serve(),
-  HttpServer.server.withLogAddress
-)
+const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress)
 
 // Specify the port
 const port = 3000
 
 // Create a server layer with the specified port
-const ServerLive = BunHttpServer.server.layer({ port })
+const ServerLive = BunHttpServer.layer({ port })
 
 // Run the application
 BunRuntime.runMain(Layer.launch(Layer.provide(app, ServerLive)))
@@ -3884,7 +3959,7 @@ timestamp=... level=INFO fiber=#0 message="Listening on http://localhost:3000"
 To avoid boilerplate code for the final server setup, we'll use a helper function from the `listen.ts` file:
 
 ```ts
-import type { HttpServer } from "@effect/platform"
+import type { HttpPlatform, HttpServer } from "@effect/platform"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
 import { Layer } from "effect"
 import { createServer } from "node:http"
@@ -3893,7 +3968,7 @@ export const listen = (
   app: Layer.Layer<
     never,
     never,
-    HttpServer.platform.Platform | HttpServer.server.Server
+    HttpPlatform.HttpPlatform | HttpServer.HttpServer
   >,
   port: number
 ) =>
@@ -3901,7 +3976,7 @@ export const listen = (
     Layer.launch(
       Layer.provide(
         app,
-        NodeHttpServer.server.layer(() => createServer(), { port })
+        NodeHttpServer.layer(() => createServer(), { port })
       )
     )
   )
@@ -3914,7 +3989,7 @@ Routing refers to determining how an application responds to a client request to
 Route definition takes the following structure:
 
 ```
-router.pipe(HttpServer.router.METHOD(PATH, HANDLER))
+router.pipe(HttpRouter.METHOD(PATH, HANDLER))
 ```
 
 Where:
@@ -3929,25 +4004,20 @@ The following examples illustrate defining simple routes.
 Respond with `"Hello World!"` on the homepage:
 
 ```ts
-router.pipe(HttpServer.router.get("/", HttpServer.response.text("Hello World")))
+router.pipe(HttpRouter.get("/", HttpServerResponse.text("Hello World")))
 ```
 
 Respond to POST request on the root route (/), the application's home page:
 
 ```ts
-router.pipe(
-  HttpServer.router.post("/", HttpServer.response.text("Got a POST request"))
-)
+router.pipe(HttpRouter.post("/", HttpServerResponse.text("Got a POST request")))
 ```
 
 Respond to a PUT request to the `/user` route:
 
 ```ts
 router.pipe(
-  HttpServer.router.put(
-    "/user",
-    HttpServer.response.text("Got a PUT request at /user")
-  )
+  HttpRouter.put("/user", HttpServerResponse.text("Got a PUT request at /user"))
 )
 ```
 
@@ -3955,26 +4025,26 @@ Respond to a DELETE request to the `/user` route:
 
 ```ts
 router.pipe(
-  HttpServer.router.del(
+  HttpRouter.del(
     "/user",
-    HttpServer.response.text("Got a DELETE request at /user")
+    HttpServerResponse.text("Got a DELETE request at /user")
   )
 )
 ```
 
 ###### Serving static files
 
-To serve static files such as images, CSS files, and JavaScript files, use the `HttpServer.response.file` built-in action.
+To serve static files such as images, CSS files, and JavaScript files, use the `HttpServerResponse.file` built-in action.
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
 import { listen } from "./listen.js"
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.file("index.html"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.file("index.html"))
 )
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4000,7 +4070,7 @@ Create an `index.html` file in your project directory:
 
 Routing refers to how an application's endpoints (URIs) respond to client requests.
 
-You define routing using methods of the `HttpServer.router` object that correspond to HTTP methods; for example, `HttpServer.router.get()` to handle GET requests and `HttpServer.router.post` to handle POST requests. You can also use `HttpServer.router.all()` to handle all HTTP methods.
+You define routing using methods of the `HttpRouter` object that correspond to HTTP methods; for example, `HttpRouter.get()` to handle GET requests and `HttpRouter.post` to handle POST requests. You can also use `HttpRouter.all()` to handle all HTTP methods.
 
 These routing methods specify a `Route.Handler` called when the application receives a request to the specified route (endpoint) and HTTP method. In other words, the application “listens” for requests that match the specified route(s) and method(s), and when it detects a match, it calls the specified handler.
 
@@ -4008,39 +4078,33 @@ The following code is an example of a very basic route.
 
 ```ts
 // respond with "hello world" when a GET request is made to the homepage
-HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 ```
 
 ###### Route methods
 
-A route method is derived from one of the HTTP methods, and is attached to an instance of the `HttpServer.router` object.
+A route method is derived from one of the HTTP methods, and is attached to an instance of the `HttpRouter` object.
 
 The following code is an example of routes that are defined for the GET and the POST methods to the root of the app.
 
 ```ts
 // GET method route
-HttpServer.router.get(
-  "/",
-  HttpServer.response.text("GET request to the homepage")
-)
+HttpRouter.get("/", HttpServerResponse.text("GET request to the homepage"))
 
 // POST method route
-HttpServer.router.post(
-  "/",
-  HttpServer.response.text("POST request to the homepage")
-)
+HttpRouter.post("/", HttpServerResponse.text("POST request to the homepage"))
 ```
 
-`HttpServer.router` supports methods that correspond to all HTTP request methods: `get`, `post`, and so on.
+`HttpRouter` supports methods that correspond to all HTTP request methods: `get`, `post`, and so on.
 
-There is a special routing method, `HttpServer.router.all()`, used to load middleware functions at a path for **all** HTTP request methods. For example, the following handler is executed for requests to the route “/secret” whether using GET, POST, PUT, DELETE.
+There is a special routing method, `HttpRouter.all()`, used to load middleware functions at a path for **all** HTTP request methods. For example, the following handler is executed for requests to the route “/secret” whether using GET, POST, PUT, DELETE.
 
 ```ts
-HttpServer.router.all(
+HttpRouter.all(
   "/secret",
-  HttpServer.response
-    .empty()
-    .pipe(Effect.tap(Console.log("Accessing the secret section ...")))
+  HttpServerResponse.empty().pipe(
+    Effect.tap(Console.log("Accessing the secret section ..."))
+  )
 )
 ```
 
@@ -4060,22 +4124,22 @@ Here are some examples of route paths based on strings.
 This route path will match requests to the root route, /.
 
 ```ts
-HttpServer.router.get("/", HttpServer.response.text("root"))
+HttpRouter.get("/", HttpServerResponse.text("root"))
 ```
 
 This route path will match requests to `/user`.
 
 ```ts
-HttpServer.router.get("/user", HttpServer.response.text("user"))
+HttpRouter.get("/user", HttpServerResponse.text("user"))
 ```
 
 This route path matches requests to any path starting with `/user` (e.g., `/user`, `/users`, etc.)
 
 ```ts
-HttpServer.router.get(
+HttpRouter.get(
   "/user*",
-  Effect.map(HttpServer.request.ServerRequest, (req) =>
-    HttpServer.response.text(req.url)
+  Effect.map(HttpServerRequest.HttpServerRequest, (req) =>
+    HttpServerResponse.text(req.url)
   )
 )
 ```
@@ -4097,7 +4161,7 @@ params: { "userId": "34", "bookId": "8989" }
 To define routes with parameters, include the parameter names in the path and use a schema to validate and parse these parameters, as shown below.
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
 import { Schema } from "@effect/schema"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
@@ -4109,23 +4173,23 @@ const Params = Schema.Struct({
 })
 
 // Create a router with a route that captures parameters
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/users/:userId/books/:bookId",
-    HttpServer.router
-      .schemaPathParams(Params)
-      .pipe(Effect.flatMap((params) => HttpServer.response.json(params)))
+    HttpRouter.schemaPathParams(Params).pipe(
+      Effect.flatMap((params) => HttpServerResponse.json(params))
+    )
   )
 )
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
 
 ###### Response methods
 
-The methods on `HttpServer.response` object in the following table can send a response to the client, and terminate the request-response cycle. If none of these methods are called from a route handler, the client request will be left hanging.
+The methods on `HttpServerResponse` object in the following table can send a response to the client, and terminate the request-response cycle. If none of these methods are called from a route handler, the client request will be left hanging.
 
 | Method       | Description                    |
 | ------------ | ------------------------------ |
@@ -4139,34 +4203,32 @@ The methods on `HttpServer.response` object in the following table can send a re
 
 ###### Router
 
-Use the `HttpServer.router` object to create modular, mountable route handlers. A `Router` instance is a complete middleware and routing system, often referred to as a "mini-app."
+Use the `HttpRouter` object to create modular, mountable route handlers. A `Router` instance is a complete middleware and routing system, often referred to as a "mini-app."
 
 The following example shows how to create a router as a module, define some routes, and mount the router module on a path in the main app.
 
 Create a file named `birds.ts` in your app directory with the following content:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServerResponse } from "@effect/platform"
 
-export const birds = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Birds home page")),
-  HttpServer.router.get("/about", HttpServer.response.text("About birds"))
+export const birds = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Birds home page")),
+  HttpRouter.get("/about", HttpServerResponse.text("About birds"))
 )
 ```
 
 In your main application file, load the router module and mount it.
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer } from "@effect/platform"
 import { birds } from "./birds.js"
 import { listen } from "./listen.js"
 
 // Create the main router and mount the birds router
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.mount("/birds", birds)
-)
+const router = HttpRouter.empty.pipe(HttpRouter.mount("/birds", birds))
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4186,7 +4248,7 @@ Here is an example of a basic "Hello World" application with middleware.
 This middleware logs "LOGGED" whenever a request passes through it.
 
 ```ts
-const myLogger = HttpServer.middleware.make((app) =>
+const myLogger = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
     console.log("LOGGED")
     return yield* app
@@ -4194,28 +4256,30 @@ const myLogger = HttpServer.middleware.make((app) =>
 )
 ```
 
-To use the middleware, add it to the router using `HttpServer.router.use()`:
+To use the middleware, add it to the router using `HttpRouter.use()`:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
-const myLogger = HttpServer.middleware.make((app) =>
+const myLogger = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
     console.log("LOGGED")
     return yield* app
   })
 )
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 )
 
-const app = router.pipe(
-  HttpServer.router.use(myLogger),
-  HttpServer.server.serve()
-)
+const app = router.pipe(HttpRouter.use(myLogger), HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4229,7 +4293,7 @@ Next, we'll create a middleware that records the timestamp of each HTTP request 
 ```ts
 class RequestTime extends Context.Tag("RequestTime")<RequestTime, number>() {}
 
-const requestTime = HttpServer.middleware.make((app) =>
+const requestTime = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
     return yield* app.pipe(Effect.provideService(RequestTime, Date.now()))
   })
@@ -4239,33 +4303,35 @@ const requestTime = HttpServer.middleware.make((app) =>
 Update the app to use this middleware and display the timestamp in the response:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Context, Effect } from "effect"
 import { listen } from "./listen.js"
 
 class RequestTime extends Context.Tag("RequestTime")<RequestTime, number>() {}
 
-const requestTime = HttpServer.middleware.make((app) =>
+const requestTime = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
     return yield* app.pipe(Effect.provideService(RequestTime, Date.now()))
   })
 )
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.gen(function* () {
       const requestTime = yield* RequestTime
       const responseText = `Hello World<br/><small>Requested at: ${requestTime}</small>`
-      return yield* HttpServer.response.html(responseText)
+      return yield* HttpServerResponse.html(responseText)
     })
   )
 )
 
-const app = router.pipe(
-  HttpServer.router.use(requestTime),
-  HttpServer.server.serve()
-)
+const app = router.pipe(HttpRouter.use(requestTime), HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4288,14 +4354,14 @@ const externallyValidateCookie = (testCookie: string | undefined) =>
     ? Effect.succeed(testCookie)
     : Effect.fail(new CookieError())
 
-const cookieValidator = HttpServer.middleware.make((app) =>
+const cookieValidator = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
-    const req = yield* HttpServer.request.ServerRequest
+    const req = yield* HttpServerRequest.HttpServerRequest
     yield* externallyValidateCookie(req.cookies.testCookie)
     return yield* app
   }).pipe(
     Effect.catchTag("CookieError", () =>
-      HttpServer.response.text("Invalid cookie")
+      HttpServerResponse.text("Invalid cookie")
     )
   )
 )
@@ -4304,7 +4370,13 @@ const cookieValidator = HttpServer.middleware.make((app) =>
 Update the app to use the `cookieValidator` middleware:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
@@ -4317,26 +4389,23 @@ const externallyValidateCookie = (testCookie: string | undefined) =>
     ? Effect.succeed(testCookie)
     : Effect.fail(new CookieError())
 
-const cookieValidator = HttpServer.middleware.make((app) =>
+const cookieValidator = HttpMiddleware.make((app) =>
   Effect.gen(function* () {
-    const req = yield* HttpServer.request.ServerRequest
+    const req = yield* HttpServerRequest.HttpServerRequest
     yield* externallyValidateCookie(req.cookies.testCookie)
     return yield* app
   }).pipe(
     Effect.catchTag("CookieError", () =>
-      HttpServer.response.text("Invalid cookie")
+      HttpServerResponse.text("Invalid cookie")
     )
   )
 )
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 )
 
-const app = router.pipe(
-  HttpServer.router.use(cookieValidator),
-  HttpServer.server.serve()
-)
+const app = router.pipe(HttpRouter.use(cookieValidator), HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4365,36 +4434,35 @@ At the route level, middlewares are applied to specific endpoints, allowing for 
 
 **Example**
 
-Here’s a practical example showing how to apply middleware at the route level:
+Here's a practical example showing how to apply middleware at the route level:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
 // Middleware constructor that logs the name of the middleware
 const withMiddleware = (name: string) =>
-  HttpServer.middleware.make((app) =>
+  HttpMiddleware.make((app) =>
     Effect.gen(function* () {
       console.log(name) // Log the middleware name when the route is accessed
       return yield* app // Continue with the original application flow
     })
   )
 
-const router = HttpServer.router.empty.pipe(
+const router = HttpRouter.empty.pipe(
   // Applying middleware to route "/a"
-  HttpServer.router.get(
-    "/a",
-    HttpServer.response.text("a").pipe(withMiddleware("M1"))
-  ),
+  HttpRouter.get("/a", HttpServerResponse.text("a").pipe(withMiddleware("M1"))),
   // Applying middleware to route "/b"
-  HttpServer.router.get(
-    "/b",
-    HttpServer.response.text("b").pipe(withMiddleware("M2"))
-  )
+  HttpRouter.get("/b", HttpServerResponse.text("b").pipe(withMiddleware("M2")))
 )
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4419,16 +4487,21 @@ Applying middleware at the router level is an efficient way to manage common fun
 
 **Example**
 
-Here’s how you can structure and apply middleware across different routers using the `@effect/platform` library:
+Here's how you can structure and apply middleware across different routers using the `@effect/platform` library:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
 // Middleware constructor that logs the name of the middleware
 const withMiddleware = (name: string) =>
-  HttpServer.middleware.make((app) =>
+  HttpMiddleware.make((app) =>
     Effect.gen(function* () {
       console.log(name) // Log the middleware name when a route is accessed
       return yield* app // Continue with the original application flow
@@ -4436,36 +4509,36 @@ const withMiddleware = (name: string) =>
   )
 
 // Define Router1 with specific routes
-const router1 = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/a", HttpServer.response.text("a")), // Middleware M4, M3, M1 will apply
-  HttpServer.router.get("/b", HttpServer.response.text("b")), // Middleware M4, M3, M1 will apply
+const router1 = HttpRouter.empty.pipe(
+  HttpRouter.get("/a", HttpServerResponse.text("a")), // Middleware M4, M3, M1 will apply
+  HttpRouter.get("/b", HttpServerResponse.text("b")), // Middleware M4, M3, M1 will apply
   // Apply Middleware at the router level
-  HttpServer.router.use(withMiddleware("M1")),
-  HttpServer.router.get("/c", HttpServer.response.text("c")) // Middleware M4, M3 will apply
+  HttpRouter.use(withMiddleware("M1")),
+  HttpRouter.get("/c", HttpServerResponse.text("c")) // Middleware M4, M3 will apply
 )
 
 // Define Router2 with specific routes
-const router2 = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/d", HttpServer.response.text("d")), // Middleware M4, M2 will apply
-  HttpServer.router.get("/e", HttpServer.response.text("e")), // Middleware M4, M2 will apply
-  HttpServer.router.get("/f", HttpServer.response.text("f")), // Middleware M4, M2 will apply
+const router2 = HttpRouter.empty.pipe(
+  HttpRouter.get("/d", HttpServerResponse.text("d")), // Middleware M4, M2 will apply
+  HttpRouter.get("/e", HttpServerResponse.text("e")), // Middleware M4, M2 will apply
+  HttpRouter.get("/f", HttpServerResponse.text("f")), // Middleware M4, M2 will apply
   // Apply Middleware at the router level
-  HttpServer.router.use(withMiddleware("M2"))
+  HttpRouter.use(withMiddleware("M2"))
 )
 
 // Main router combining Router1 and Router2
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.mount("/r1", router1),
+const router = HttpRouter.empty.pipe(
+  HttpRouter.mount("/r1", router1),
   // Apply Middleware affecting all routes under /r1
-  HttpServer.router.use(withMiddleware("M3")),
-  HttpServer.router.get("/g", HttpServer.response.text("g")), // Only Middleware M4 will apply
-  HttpServer.router.mount("/r2", router2),
+  HttpRouter.use(withMiddleware("M3")),
+  HttpRouter.get("/g", HttpServerResponse.text("g")), // Only Middleware M4 will apply
+  HttpRouter.mount("/r2", router2),
   // Apply Middleware affecting all routes
-  HttpServer.router.use(withMiddleware("M4"))
+  HttpRouter.use(withMiddleware("M4"))
 )
 
 // Configure the application with the server middleware
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4499,30 +4572,32 @@ Applying middleware at the server level allows you to introduce certain function
 **Example**
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
 // Middleware constructor that logs the name of the middleware
 const withMiddleware = (name: string) =>
-  HttpServer.middleware.make((app) =>
+  HttpMiddleware.make((app) =>
     Effect.gen(function* () {
       console.log(name) // Log the middleware name when the route is accessed
       return yield* app // Continue with the original application flow
     })
   )
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
-    "/a",
-    HttpServer.response.text("a").pipe(withMiddleware("M1"))
-  ),
-  HttpServer.router.get("/b", HttpServer.response.text("b")),
-  HttpServer.router.use(withMiddleware("M2")),
-  HttpServer.router.get("/", HttpServer.response.text("root"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/a", HttpServerResponse.text("a").pipe(withMiddleware("M1"))),
+  HttpRouter.get("/b", HttpServerResponse.text("b")),
+  HttpRouter.use(withMiddleware("M2")),
+  HttpRouter.get("/", HttpServerResponse.text("root"))
 )
 
-const app = router.pipe(HttpServer.server.serve(withMiddleware("M3")))
+const app = router.pipe(HttpServer.serve(withMiddleware("M3")))
 
 listen(app, 3000)
 ```
@@ -4552,13 +4627,18 @@ Middleware functions are simply functions that transform a `Default` app into an
 **Example**
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect, flow } from "effect"
 import { listen } from "./listen.js"
 
 // Middleware constructor that logs the middleware's name when a route is accessed
 const withMiddleware = (name: string) =>
-  HttpServer.middleware.make((app) =>
+  HttpMiddleware.make((app) =>
     Effect.gen(function* () {
       console.log(name) // Log the middleware name
       return yield* app // Continue with the original application flow
@@ -4566,22 +4646,22 @@ const withMiddleware = (name: string) =>
   )
 
 // Setup routes and apply multiple middlewares using flow for function composition
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/a",
-    HttpServer.response
-      .text("a")
-      .pipe(flow(withMiddleware("M1"), withMiddleware("M2")))
+    HttpServerResponse.text("a").pipe(
+      flow(withMiddleware("M1"), withMiddleware("M2"))
+    )
   ),
-  HttpServer.router.get("/b", HttpServer.response.text("b")),
+  HttpRouter.get("/b", HttpServerResponse.text("b")),
   // Apply combined middlewares to the entire router
-  HttpServer.router.use(flow(withMiddleware("M3"), withMiddleware("M4"))),
-  HttpServer.router.get("/", HttpServer.response.text("root"))
+  HttpRouter.use(flow(withMiddleware("M3"), withMiddleware("M4"))),
+  HttpRouter.get("/", HttpServerResponse.text("root"))
 )
 
 // Apply combined middlewares at the server level
 const app = router.pipe(
-  HttpServer.server.serve(flow(withMiddleware("M5"), withMiddleware("M6")))
+  HttpServer.serve(flow(withMiddleware("M5"), withMiddleware("M6")))
 )
 
 listen(app, 3000)
@@ -4616,18 +4696,23 @@ curl -i http://localhost:3000/
 
 ###### logger
 
-The `HttpServer.middleware.logger` middleware enables logging for your entire application, providing insights into each request and response. Here’s how to set it up:
+The `HttpMiddleware.logger` middleware enables logging for your entire application, providing insights into each request and response. Here's how to set it up:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { listen } from "./listen.js"
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World"))
 )
 
 // Apply the logger middleware globally
-const app = router.pipe(HttpServer.server.serve(HttpServer.middleware.logger))
+const app = router.pipe(HttpServer.serve(HttpMiddleware.logger))
 
 listen(app, 3000)
 /*
@@ -4640,25 +4725,28 @@ timestamp=... level=INFO fiber=#20 cause="RouteNotFound: GET /favicon.ico not fo
 */
 ```
 
-To disable the logger for specific routes, you can use `HttpServer.middleware.withLoggerDisabled`:
+To disable the logger for specific routes, you can use `HttpMiddleware.withLoggerDisabled`:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerResponse
+} from "@effect/platform"
 import { listen } from "./listen.js"
 
 // Create the router with routes that will and will not have logging
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("Hello World")),
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("Hello World")),
+  HttpRouter.get(
     "/no-logger",
-    HttpServer.response
-      .text("no-logger")
-      .pipe(HttpServer.middleware.withLoggerDisabled)
+    HttpServerResponse.text("no-logger").pipe(HttpMiddleware.withLoggerDisabled)
   )
 )
 
 // Apply the logger middleware globally
-const app = router.pipe(HttpServer.server.serve(HttpServer.middleware.logger))
+const app = router.pipe(HttpServer.serve(HttpMiddleware.logger))
 
 listen(app, 3000)
 /*
@@ -4672,27 +4760,31 @@ timestamp=2024-05-19T09:53:29.877Z level=INFO fiber=#0 message="Listening on htt
 This middleware handles `X-Forwarded-*` headers, useful when your app is behind a reverse proxy or load balancer and you need to retrieve the original client's IP and host information.
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse
+} from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
 // Create a router and a route that logs request headers and remote address
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.gen(function* () {
-      const req = yield* HttpServer.request.ServerRequest
+      const req = yield* HttpServerRequest.HttpServerRequest
       console.log(req.headers)
       console.log(req.remoteAddress)
-      return yield* HttpServer.response.text("Hello World")
+      return yield* HttpServerResponse.text("Hello World")
     })
   )
 )
 
 // Set up the server with xForwardedHeaders middleware
-const app = router.pipe(
-  HttpServer.server.serve(HttpServer.middleware.xForwardedHeaders)
-)
+const app = router.pipe(HttpServer.serve(HttpMiddleware.xForwardedHeaders))
 
 listen(app, 3000)
 /*
@@ -4716,31 +4808,31 @@ timestamp=... level=INFO fiber=#0 message="Listening on http://0.0.0.0:3000"
 Below is an example illustrating how to catch and manage errors that occur during the execution of route handlers:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
 // Define routes that might throw errors or fail
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/throw",
     Effect.sync(() => {
       throw new Error("BROKEN") // This will intentionally throw an error
     })
   ),
-  HttpServer.router.get("/fail", Effect.fail("Uh oh!")) // This will intentionally fail
+  HttpRouter.get("/fail", Effect.fail("Uh oh!")) // This will intentionally fail
 )
 
 // Configure the application to handle different types of errors
 const app = router.pipe(
   Effect.catchTags({
     RouteNotFound: () =>
-      HttpServer.response.text("Route Not Found", { status: 404 })
+      HttpServerResponse.text("Route Not Found", { status: 404 })
   }),
   Effect.catchAllCause((cause) =>
-    HttpServer.response.text(cause.toString(), { status: 500 })
+    HttpServerResponse.text(cause.toString(), { status: 500 })
   ),
-  HttpServer.server.serve()
+  HttpServer.serve()
 )
 
 listen(app, 3000)
@@ -4768,30 +4860,35 @@ Validation is a critical aspect of handling HTTP requests to ensure that the dat
 Headers often contain important information needed by your application, such as content types, authentication tokens, or session data. Validating these headers ensures that your application can trust and correctly process the information it receives.
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse
+} from "@effect/platform"
 import { Schema } from "@effect/schema"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.gen(function* () {
       // Define the schema for expected headers and validate them
-      const headers = yield* HttpServer.request.schemaHeaders(
+      const headers = yield* HttpServerRequest.schemaHeaders(
         Schema.Struct({ test: Schema.String })
       )
-      return yield* HttpServer.response.text("header: " + headers.test)
+      return yield* HttpServerResponse.text("header: " + headers.test)
     }).pipe(
       // Handle parsing errors
       Effect.catchTag("ParseError", (e) =>
-        HttpServer.response.text(`Invalid header: ${e.message}`)
+        HttpServerResponse.text(`Invalid header: ${e.message}`)
       )
     )
   )
 )
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4810,31 +4907,37 @@ curl -i -H "test: myvalue" http://localhost:3000
 
 Cookies are commonly used to maintain session state or user preferences. Validating cookies ensures that the data they carry is intact and as expected, enhancing security and application integrity.
 
-Here’s how you can validate cookies received in HTTP requests:
+Here's how you can validate cookies received in HTTP requests:
 
 ```ts
-import { HttpServer } from "@effect/platform"
+import {
+  Cookies,
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse
+} from "@effect/platform"
 import { Schema } from "@effect/schema"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.gen(function* () {
-      const cookies = yield* HttpServer.request.schemaCookies(
+      const cookies = yield* HttpServerRequest.schemaCookies(
         Schema.Struct({ test: Schema.String })
       )
-      return yield* HttpServer.response.text("cookie: " + cookies.test)
+      return yield* HttpServerResponse.text("cookie: " + cookies.test)
     }).pipe(
       Effect.catchTag("ParseError", (e) =>
-        HttpServer.response.text(`Invalid cookie: ${e.message}`)
+        HttpServerResponse.text(`Invalid cookie: ${e.message}`)
       )
     )
   )
 )
 
-const app = router.pipe(HttpServer.server.serve())
+const app = router.pipe(HttpServer.serve())
 
 listen(app, 3000)
 ```
@@ -4858,24 +4961,29 @@ The native request object depends on the platform you are using, and it is not d
 Here is an example using Node.js:
 
 ```ts
-import { HttpServer } from "@effect/platform"
-import { NodeHttpServer } from "@effect/platform-node"
+import {
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse
+} from "@effect/platform"
+import { NodeHttpServer, NodeHttpServerRequest } from "@effect/platform-node"
 import { Effect } from "effect"
 import { listen } from "./listen.js"
 
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get(
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.gen(function* () {
-      const req = yield* HttpServer.request.ServerRequest
-      const raw = NodeHttpServer.request.toIncomingMessage(req)
+      const req = yield* HttpServerRequest.HttpServerRequest
+      const raw = NodeHttpServerRequest.toIncomingMessage(req)
       console.log(raw)
-      return HttpServer.response.empty()
+      return HttpServerResponse.empty()
     })
   )
 )
 
-listen(HttpServer.server.serve(router), 3000)
+listen(HttpServer.serve(router), 3000)
 ```
 
 ###### Conversions
@@ -4885,17 +4993,17 @@ listen(HttpServer.server.serve(router), 3000)
 The `toWebHandler` function converts a `Default` (i.e. a type of `HttpApp` that specifically produces a `ServerResponse` as its output) into a web handler that can process `Request` objects and return `Response` objects.
 
 ```ts
-import * as HttpServer from "@effect/platform/HttpServer"
+import { HttpApp, HttpRouter, HttpServerResponse } from "@effect/platform"
 
 // Define the router with some routes
-const router = HttpServer.router.empty.pipe(
-  HttpServer.router.get("/", HttpServer.response.text("content 1")),
-  HttpServer.router.get("/foo", HttpServer.response.text("content 2"))
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/", HttpServerResponse.text("content 1")),
+  HttpRouter.get("/foo", HttpServerResponse.text("content 2"))
 )
 
 // Convert the router to a web handler
 // const handler: (request: Request) => Promise<Response>
-const handler = HttpServer.app.toWebHandler(router)
+const handler = HttpApp.toWebHandler(router)
 
 // Test the handler with a request
 const response = await handler(new Request("http://localhost:3000/foo"))
@@ -5580,6 +5688,7 @@ const Person = Schema.Struct({
 })
 
 const asyncSchema = Schema.transformOrFail(PersonId, Person, {
+  strict: true,
   // Simulate an async transformation
   decode: (id) =>
     Effect.succeed({ id, name: "name", age: 18 }).pipe(
@@ -5613,6 +5722,8 @@ Output:
 ```
 
 As shown in the code above, the first approach returns a `Forbidden` error, indicating that using `decodeUnknownEither` with an async transformation is not allowed. However, the second approach works as expected, allowing you to handle async transformations and return the desired result.
+
+###### Parse Options
 
 ###### Excess properties
 
@@ -5765,6 +5876,7 @@ import { Effect } from "effect"
 const effectify = (duration: Duration.DurationInput) =>
   Schema.Number.pipe(
     Schema.transformOrFail(Schema.Number, {
+      strict: true,
       decode: (x) =>
         Effect.sleep(duration).pipe(Effect.andThen(ParseResult.succeed(x))),
       encode: ParseResult.succeed
@@ -5790,6 +5902,53 @@ Schema.decode(schema)({ a: 1, b: 2, c: 3 }, { propertyOrder: "original" })
   .then(console.log)
 // Output preserving input order: { a: 1, b: 2, c: 3 }
 ```
+
+###### Customizing Parsing Behavior at the Schema Level
+
+You can tailor parse options for each schema using the `parseOptions` annotation. These options allow for specific parsing behavior at various levels of the schema hierarchy, overriding any parent settings and cascading down to nested schemas.
+
+```ts
+import { Schema } from "@effect/schema"
+import { Either } from "effect"
+
+const schema = Schema.Struct({
+  a: Schema.Struct({
+    b: Schema.String,
+    c: Schema.String
+  }).annotations({
+    title: "first error only",
+    parseOptions: { errors: "first" } // Only the first error in this sub-schema is reported
+  }),
+  d: Schema.String
+}).annotations({
+  title: "all errors",
+  parseOptions: { errors: "all" } // All errors in the main schema are reported
+})
+
+const result = Schema.decodeUnknownEither(schema)(
+  { a: {} },
+  { errors: "first" }
+)
+if (Either.isLeft(result)) {
+  console.log(result.left.message)
+}
+/*
+all errors
+├─ ["d"]
+│  └─ is missing
+└─ ["a"]
+   └─ first error only
+      └─ ["b"]
+         └─ is missing
+*/
+```
+
+**Detailed Output Explanation:**
+
+In this example:
+
+- The main schema is configured to display all errors. Hence, you will see errors related to both the `d` field (since it's missing) and any errors from the `a` subschema.
+- The subschema (`a`) is set to display only the first error. Although both `b` and `c` fields are missing, only the first missing field (`b`) is reported.
 
 ###### Managing Missing Properties
 
@@ -5991,9 +6150,33 @@ Decoding failed:
 
 In this example, the tree error message is structured as follows:
 
-- `{ name: string; age: number }` represents the schema, providing a visual representation of the expected structure. This can be customized using annotations, such as setting the `identifier` annotation.
-- `["name"]` indicates the offending property, in this case, the `"name"` property.
-- `is missing` represents the specific error for the `"name"` property.
+- `{ readonly name: string; readonly age: number }` represents the schema, providing a visual representation of the expected structure. This can be customized by using annotations like `identifier`, `title`, or `description`.
+- `["name"]` points to the problematic property, in this case, the `"name"` property.
+- `is missing` details the specific error for the `"name"` property.
+
+**Example of customizing the type output**
+
+```ts
+import { Schema, TreeFormatter } from "@effect/schema"
+import { Either } from "effect"
+
+const Person = Schema.Struct({
+  name: Schema.String,
+  age: Schema.Number
+}).annotations({ title: "Person" }) // Adding a title annotation
+
+const result = Schema.decodeUnknownEither(Person)({})
+if (Either.isLeft(result)) {
+  console.error(TreeFormatter.formatErrorSync(result.left))
+}
+/*
+Person
+└─ ["name"]
+   └─ is missing
+*/
+```
+
+In this adjusted example, adding the `title` annotation changes how the schema is represented in the error message.
 
 **Handling Multiple Errors**
 
@@ -6362,6 +6545,7 @@ const schema = Schema.transform(
   Schema.String,
   Schema.String.pipe(Schema.trimmed(), Schema.lowercased()),
   {
+    strict: true,
     decode: (s) => s.trim().toLowerCase(),
     encode: (s) => s
   }
@@ -6842,6 +7026,34 @@ the default would be:
 */
 ```
 
+###### Understanding `Schema.parseJson` in JSON Schema Generation
+
+When utilizing `Schema.parseJson` within the `@effect/schema` library, JSON Schema generation follows a specialized approach. Instead of merely generating a JSON Schema for a string—which would be the default output representing the "from" side of the transformation defined by `Schema.parseJson`—it specifically generates the JSON Schema for the actual schema provided as an argument.
+
+**Example of Generating JSON Schema with `Schema.parseJson`**
+
+```ts
+import { JSONSchema, Schema } from "@effect/schema"
+
+// Define a schema that parses a JSON string into a structured object
+const schema = Schema.parseJson(
+  Schema.Struct({
+    a: Schema.parseJson(Schema.NumberFromString) // Nested parsing from JSON string to number
+  })
+)
+
+console.log(JSONSchema.make(schema))
+/*
+{
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  type: 'object',
+  required: [ 'a' ],
+  properties: { a: { type: 'string', description: 'a string', title: 'string' } },
+  additionalProperties: false
+}
+*/
+```
+
 ###### Generating Equivalences
 
 The `make` function, which is part of the `@effect/schema/Equivalence` module, allows you to generate an [Equivalence](https://effect-ts.github.io/effect/schema/Equivalence.ts.html) based on a schema definition:
@@ -7055,6 +7267,8 @@ const mySymbolSchema = Schema.UniqueSymbolFromSelf(mySymbol)
 ###### Filters
 
 Using the `Schema.filter` function, developers can define custom validation logic that goes beyond basic type checks, allowing for in-depth control over the data conformity process. This function applies a predicate to data, and if the data fails the predicate's condition, a custom error message can be returned.
+
+**Note**. For effectful filters, see [`filterEffect`](#effectful-filters).
 
 **Simple Validation Example**:
 
@@ -7625,6 +7839,7 @@ const DiscriminatedShape = Schema.Union(
     Schema.transform(
       Schema.Struct({ ...Circle.fields, kind: Schema.Literal("circle") }), // Add a "kind" property with the literal value "circle" to Circle
       {
+        strict: true,
         decode: (circle) => ({ ...circle, kind: "circle" as const }), // Add the discriminant property to Circle
         encode: ({ kind: _kind, ...rest }) => rest // Remove the discriminant property
       }
@@ -7634,6 +7849,7 @@ const DiscriminatedShape = Schema.Union(
     Schema.transform(
       Schema.Struct({ ...Square.fields, kind: Schema.Literal("square") }), // Add a "kind" property with the literal value "square" to Square
       {
+        strict: true,
         decode: (square) => ({ ...square, kind: "square" as const }), // Add the discriminant property to Square
         encode: ({ kind: _kind, ...rest }) => rest // Remove the discriminant property
       }
@@ -8846,38 +9062,66 @@ Error: Expected MyData (an instance of MyData), actual {"name":"name"}
 
 ###### pick
 
-The `pick` operation is used to select specific properties from a schema.
+The `pick` static function available in each struct schema can be used to create a new `Struct` by selecting particular properties from an existing `Struct`.
 
 ```ts
 import { Schema } from "@effect/schema"
 
-// Schema<{ readonly a: string; }>
-Schema.Struct({ a: Schema.String, b: Schema.Number, c: Schema.Boolean }).pipe(
-  Schema.pick("a")
+const MyStruct = Schema.Struct({
+  a: Schema.String,
+  b: Schema.Number,
+  c: Schema.Boolean
+})
+
+// Schema.Struct<{ a: typeof Schema.String; c: typeof Schema.Boolean; }>
+const PickedSchema = MyStruct.pick("a", "c")
+```
+
+The `Schema.pick` function can be applied more broadly beyond just `Struct` types, such as with unions of schemas. However it returns a generic `SchemaClass`.
+
+**Example: Picking from a Union**
+
+```ts
+import { Schema } from "@effect/schema"
+
+const MyUnion = Schema.Union(
+  Schema.Struct({ a: Schema.String, b: Schema.String, c: Schema.String }),
+  Schema.Struct({ a: Schema.Number, b: Schema.Number, d: Schema.Number })
 )
 
-// Schema<{ readonly a: string; readonly c: boolean; }>
-Schema.Struct({ a: Schema.String, b: Schema.Number, c: Schema.Boolean }).pipe(
-  Schema.pick("a", "c")
-)
+// Schema.SchemaClass<{ readonly a: string | number; readonly b: string | number }>
+const PickedSchema = MyUnion.pipe(Schema.pick("a", "b"))
 ```
 
 ###### omit
 
-The `omit` operation is employed to exclude certain properties from a schema.
+The `omit` static function available in each struct schema can be used to create a new `Struct` by excluding particular properties from an existing `Struct`.
 
 ```ts
 import { Schema } from "@effect/schema"
 
-// Schema<{ readonly b: number; readonly c: boolean; }>
-Schema.Struct({ a: Schema.String, b: Schema.Number, c: Schema.Boolean }).pipe(
-  Schema.omit("a")
+const MyStruct = Schema.Struct({
+  a: Schema.String,
+  b: Schema.Number,
+  c: Schema.Boolean
+})
+
+// Schema.Struct<{ a: typeof Schema.String; c: typeof Schema.Boolean; }>
+const PickedSchema = MyStruct.omit("b")
+```
+
+The `Schema.omit` function can be applied more broadly beyond just `Struct` types, such as with unions of schemas. However it returns a generic `SchemaClass`.
+
+```ts
+import { Schema } from "@effect/schema"
+
+const MyUnion = Schema.Union(
+  Schema.Struct({ a: Schema.String, b: Schema.String, c: Schema.String }),
+  Schema.Struct({ a: Schema.Number, b: Schema.Number, d: Schema.Number })
 )
 
-// Schema<{ readonly b: number; }>
-Schema.Struct({ a: Schema.String, b: Schema.Number, c: Schema.Boolean }).pipe(
-  Schema.omit("a", "c")
-)
+// Schema.SchemaClass<{ readonly a: string | number }>
+const PickedSchema = MyUnion.pipe(Schema.omit("b"))
 ```
 
 ###### partial
@@ -8942,55 +9186,163 @@ Schema.required(
 
 ###### Extending Schemas
 
-The `extend` combinator allows you to add **additional** fields or index signatures to an existing `Schema`.
+###### Spreading Struct fields
 
-Example
+Structs expose their fields through a `fields` property. This feature can be utilized to extend an existing struct with additional fields or to merge fields from another struct. Here's how you can enhance the functionality of your schemas by spreading fields:
+
+**Example: Adding Fields**
 
 ```ts
 import { Schema } from "@effect/schema"
 
-const schema = Schema.Struct({
+const Struct1 = Schema.Struct({
   a: Schema.String,
   b: Schema.String
 })
 
-/*
-const extended: S.Schema<{
-    readonly [x: string]: string;
-    readonly a: string;
-    readonly b: string;
-    readonly c: string;
-}>
-*/
-const extended = Schema.asSchema(
-  schema.pipe(
-    Schema.extend(Schema.Struct({ c: Schema.String })), // <= you can add more fields
-    Schema.extend(Schema.Record(Schema.String, Schema.String)) // <= you can add index signatures
-  )
-)
+const Extended = Schema.Struct({
+  ...Struct1.fields,
+  // ...other fields
+  c: Schema.String,
+  d: Schema.String
+})
 ```
 
-Alternatively, you can utilize the `fields` property of structs:
+**Example: Integrating Additional Property Signatures**
 
 ```ts
 import { Schema } from "@effect/schema"
 
-const schema = Schema.Struct({ a: Schema.String, b: Schema.String })
+const Struct = Schema.Struct({
+  a: Schema.String,
+  b: Schema.String
+})
 
-const extended = Schema.Struct(
+const Extended = Schema.Struct(
   {
-    ...schema.fields,
-    c: Schema.String
+    ...Struct.fields
   },
-  { key: Schema.String, value: Schema.String }
+  Schema.Record(Schema.String, Schema.String)
 )
 ```
+
+**Example: Merging Fields from Two Structs**
+
+```ts
+import { Schema } from "@effect/schema"
+
+const Struct1 = Schema.Struct({
+  a: Schema.String,
+  b: Schema.String
+})
+
+const Struct2 = Schema.Struct({
+  c: Schema.String,
+  d: Schema.String
+})
+
+const Extended = Schema.Struct({
+  ...Struct1.fields,
+  ...Struct2.fields
+})
+```
+
+**Example: Using Pick and Omit**
+
+The `fields` property being a plain object allows for flexible manipulations such as picking or omitting specific fields using utility functions like `pick` and `omit`.
+
+```ts
+import { Schema } from "@effect/schema"
+import { Struct } from "effect"
+
+const Struct1 = Schema.Struct({
+  a: Schema.String,
+  b: Schema.String
+})
+
+const Struct2 = Schema.Struct({
+  c: Schema.String,
+  d: Schema.String,
+  e: Schema.String
+})
+
+const Extended = Schema.Struct({
+  ...Struct.pick(Struct1.fields, "a"),
+  ...Struct.omit(Struct2.fields, "d")
+})
+```
+
+###### The extend combinator
+
+The `extend` combinator offers a structured way to extend schemas, particularly useful when direct field spreading is insufficient—for instance, when you need to extend a struct with a union of structs.
 
 > [!NOTE]
 > Note that there are strict limitations on the schemas that can be handled by `extend`:
 
-1. It only supports **structs**, refinements of structs, unions of structs, suspensions of structs (informally `Supported = Struct | Refinement of Supported | Union of Supported | suspend(() => Supported)`)
-2. The arguments must represent disjoint types (e.g., `extend(Struct({ a: String }), Struct({ a: String })))` raises an error)
+1. It only supports structs, refinements of structs, unions of structs, suspensions of structs (informally `Supported = Struct | Refinement of Supported | Union of Supported | suspend(() => Supported)`)
+2. It requires that the combined schemas represent **disjoint types** to avoid type conflicts.
+
+**Example: Extending a Struct with a Union of Structs**
+
+```ts
+import { Schema } from "@effect/schema"
+
+const Struct = Schema.Struct({
+  a: Schema.String
+})
+
+const UnionOfStructs = Schema.Union(
+  Schema.Struct({ b: Schema.String }),
+  Schema.Struct({ c: Schema.String })
+)
+
+const Extended = Schema.extend(Struct, UnionOfStructs)
+```
+
+This example shows an attempt to extend a struct with another struct where field names overlap, leading to an error:
+
+```ts
+import { Schema } from "@effect/schema"
+
+const Struct = Schema.Struct({
+  a: Schema.String
+})
+
+const OverlappingUnion = Schema.Union(
+  Schema.Struct({ a: Schema.Number }), // duplicate key
+  Schema.Struct({ d: Schema.String })
+)
+
+const Extended = Schema.extend(Struct, OverlappingUnion)
+/*
+throws:
+Error: Unsupported schema or overlapping types
+at path: ["a"]
+details: cannot extend string with number
+*/
+```
+
+**Example: Merging Compatible Structs**
+
+However, schemas can be merged if they are structurally disjoint, even if they share the same top-level key:
+
+```ts
+import { Schema } from "@effect/schema"
+
+const Struct1 = Schema.Struct({
+  a: Schema.Struct({
+    b: Schema.String
+  })
+})
+
+const Struct2 = Schema.Struct({
+  a: Schema.Struct({
+    c: Schema.String // Different inner key under the same top-level 'a'
+  })
+})
+
+const Extended = Schema.extend(Struct1, Struct2)
+```
 
 ###### Composition
 
@@ -9382,6 +9734,7 @@ export const transformedSchema = Schema.transform(
   Schema.Number, // Source schema
   Schema.Number, // Target schema
   {
+    strict: true, // optional but you get better error messages from TypeScript
     decode: (n) => n * 2, // Transformation function to double the number
     encode: (n) => n / 2 // Reverse transformation to revert to the original number
   }
@@ -9399,6 +9752,7 @@ export const transformedSchema = Schema.transform(
   Schema.String, // Source schema: accepts any string
   Schema.String, // Target schema: also accepts any string
   {
+    strict: true,
     decode: (s) => s.trim(), // Trim the string during decoding
     encode: (s) => s // No change during encoding
   }
@@ -9406,6 +9760,28 @@ export const transformedSchema = Schema.transform(
 ```
 
 In this example, the `transform` function is used to create a schema that automatically trims leading and trailing whitespace from a string when decoding. During encoding, it simply returns the string as is, assuming it's already trimmed.
+
+**Example: Converting an array to a ReadonlySet**
+
+```ts
+import { Schema } from "@effect/schema"
+
+export const ReadonlySetFromArray = <A, I, R>(
+  itemSchema: Schema.Schema<A, I, R>
+): Schema.Schema<ReadonlySet<A>, ReadonlyArray<I>, R> =>
+  Schema.transform(
+    Schema.Array(itemSchema),
+    Schema.ReadonlySetFromSelf(Schema.typeSchema(itemSchema)),
+    {
+      strict: true,
+      decode: (as) => new Set(as),
+      encode: (set) => Array.from(set.values())
+    }
+  )
+```
+
+> [!WARNING]
+> Please note that to define the target schema, we used `Schema.typeSchema(itemSchema)`. This is because the decoding/encoding of the elements is already handled by the `from` schema, `Schema.Array(itemSchema)`.
 
 ###### Improving the Transformation with a Filter
 
@@ -9418,6 +9794,7 @@ export const transformedSchema = Schema.transform(
   Schema.String, // Source schema: accepts any string
   Schema.String.pipe(Schema.filter((s) => s === s.trim())), // Target schema now only accepts strings that are trimmed
   {
+    strict: true,
     decode: (s) => s.trim(), // Trim the string during decoding
     encode: (s) => s // No change during encoding
   }
@@ -9447,7 +9824,11 @@ const clamp =
         Schema.typeSchema,
         Schema.filter((a) => a <= minimum || a >= maximum)
       ),
-      { decode: (a) => Number.clamp(a, { minimum, maximum }), encode: (a) => a }
+      {
+        strict: true,
+        decode: (a) => Number.clamp(a, { minimum, maximum }),
+        encode: (a) => a
+      }
     )
 ```
 
@@ -9512,6 +9893,7 @@ export const NumberFromString = Schema.transformOrFail(
   Schema.String, // Source schema: accepts any string
   Schema.Number, // Target schema: expects a number
   {
+    strict: true, // optional but you get better error messages from TypeScript
     decode: (input, options, ast) => {
       const parsed = parseFloat(input)
       if (isNaN(parsed)) {
@@ -9562,6 +9944,7 @@ const PeopleId = Schema.String.pipe(Schema.brand("PeopleId"))
 
 // Define a schema with async transformation
 const PeopleIdFromString = Schema.transformOrFail(Schema.String, PeopleId, {
+  strict: true,
   decode: (s, _, ast) =>
     Effect.mapBoth(api(`https://swapi.dev/api/people/${s}`), {
       onFailure: (e) => new ParseResult.Type(ast, s, e.message),
@@ -9630,6 +10013,7 @@ const api = (url: string): Effect.Effect<unknown, Error, "Fetch"> =>
 const PeopleId = Schema.String.pipe(Schema.brand("PeopleId"))
 
 const PeopleIdFromString = Schema.transformOrFail(Schema.String, PeopleId, {
+  strict: true,
   decode: (s, _, ast) =>
     Effect.mapBoth(api(`https://swapi.dev/api/people/${s}`), {
       onFailure: (e) => new ParseResult.Type(ast, s, e.message),
@@ -9667,6 +10051,36 @@ Output:
     failure: '(string <-> string)\n└─ Transformation process failure\n   └─ Error: 404'
   }
 }
+*/
+```
+
+###### Effectful Filters
+
+The `filterEffect` function enhances the `filter` functionality by allowing the integration of effects, thus enabling asynchronous or dynamic validation scenarios. This is particularly useful when validations need to perform operations that require side effects, such as network requests or database queries.
+
+**Example: Validating Usernames Asynchronously**
+
+```ts
+import { Schema } from "@effect/schema"
+import { Effect } from "effect"
+
+async function validateUsername(username: string) {
+  return Promise.resolve(username === "gcanti")
+}
+
+const ValidUsername = Schema.String.pipe(
+  Schema.filterEffect((username) =>
+    Effect.promise(() =>
+      validateUsername(username).then((valid) => valid || "Invalid username")
+    )
+  )
+).annotations({ identifier: "ValidUsername" })
+
+Effect.runPromise(Schema.decodeUnknown(ValidUsername)("xxx")).then(console.log)
+/*
+ParseError: ValidUsername
+└─ Transformation process failure
+   └─ Invalid username
 */
 ```
 
@@ -9741,6 +10155,40 @@ console.log(decode(" abC ")) // " ABC "
 ```
 
 **Note**. If you were looking for a combinator to check if a string is uppercased, check out the `Uppercased` schema or the `uppercased` filter.
+
+###### Capitalize
+
+The `Capitalize` schema converts a string to capitalized one.
+
+```ts
+import { Schema } from "@effect/schema"
+
+const decode = Schema.decodeUnknownSync(Schema.Capitalize)
+
+console.log(decode("aa")) // "Aa"
+console.log(decode(" ab")) // " ab"
+console.log(decode("aB ")) // "AB "
+console.log(decode(" abC ")) // " abC "
+```
+
+**Note**. If you were looking for a combinator to check if a string is capitalized, check out the `Capitalized` schema or the `capitalized` filter.
+
+###### Uncapitalize
+
+The `Uncapitalize` schema converts a string to uncapitalized one.
+
+```ts
+import { Schema } from "@effect/schema"
+
+const decode = Schema.decodeUnknownSync(Schema.Uncapitalize)
+
+console.log(decode("AA")) // "aA"
+console.log(decode(" AB")) // " AB"
+console.log(decode("Ab ")) // "ab "
+console.log(decode(" AbC ")) // " AbC "
+```
+
+**Note**. If you were looking for a combinator to check if a string is uncapitalized, check out the `Uncapitalized` schema or the `uncapitalized` filter.
 
 ###### parseJson
 
@@ -10301,7 +10749,9 @@ const Category = Schema.Struct({
 
 ###### Default Error Messages
 
-When a parsing, decoding, or encoding process encounters a failure, a default error message is automatically generated for you. Let's explore some examples:
+By default, when a parsing error occurs, the system automatically generates an informative message based on the schema's structure and the nature of the error. For example, if a required property is missing or a data type does not match, the error message will clearly state the expectation versus the actual input.
+
+**Type Mismatch Example**
 
 ```ts
 import { Schema } from "@effect/schema"
@@ -10316,6 +10766,17 @@ Schema.decodeUnknownSync(schema)(null)
 throws:
 Error: Expected { readonly name: string; readonly age: number }, actual null
 */
+```
+
+**Missing Properties Example**
+
+```ts
+import { Schema } from "@effect/schema"
+
+const schema = Schema.Struct({
+  name: Schema.String,
+  age: Schema.Number
+})
 
 Schema.decodeUnknownSync(schema)({}, { errors: "all" })
 /*
@@ -10328,25 +10789,52 @@ Error: { readonly name: string; readonly age: number }
 */
 ```
 
-###### Identifiers in Error Messages
-
-When you include an identifier annotation, it will be incorporated into the default error message, followed by a description if provided:
+**Incorrect Property Type Example**
 
 ```ts
 import { Schema } from "@effect/schema"
 
 const schema = Schema.Struct({
-  name: Schema.String.annotations({ identifier: "Name" }),
-  age: Schema.Number.annotations({ identifier: "Age" })
+  name: Schema.String,
+  age: Schema.Number
+})
+
+Schema.decodeUnknownSync(schema)({ name: null, age: "age" }, { errors: "all" })
+/*
+throws:
+ParseError: { readonly name: string; readonly age: number }
+├─ ["name"]
+│  └─ Expected string, actual null
+└─ ["age"]
+   └─ Expected number, actual "age"
+*/
+```
+
+###### Enhancing Clarity in Error Messages with Identifiers
+
+In scenarios where a schema has multiple fields or nested structures, the default error messages can become overly complex and verbose. To address this, you can enhance the clarity and brevity of these messages by utilizing annotations such as `identifier`, `title`, and `description`.
+
+Incorporating an `identifier` annotation into your schema allows you to customize the error messages, making them more succinct and directly relevant to the specific part of the schema that triggered the error. Here's how you can apply this in practice:
+
+```ts
+import { Schema } from "@effect/schema"
+
+const Name = Schema.String.annotations({ identifier: "Name" })
+
+const Age = Schema.Number.annotations({ identifier: "Age" })
+
+const Person = Schema.Struct({
+  name: Name,
+  age: Age
 }).annotations({ identifier: "Person" })
 
-Schema.decodeUnknownSync(schema)(null)
+Schema.decodeUnknownSync(Person)(null)
 /*
 throws:
 Error: Expected Person, actual null
 */
 
-Schema.decodeUnknownSync(schema)({}, { errors: "all" })
+Schema.decodeUnknownSync(Person)({}, { errors: "all" })
 /*
 throws:
 Error: Person
@@ -10356,7 +10844,7 @@ Error: Person
    └─ is missing
 */
 
-Schema.decodeUnknownSync(schema)({ name: null, age: null }, { errors: "all" })
+Schema.decodeUnknownSync(Person)({ name: null, age: null }, { errors: "all" })
 /*
 throws:
 Error: Person
@@ -10374,13 +10862,17 @@ When a refinement fails, the default error message indicates whether the failure
 ```ts
 import { Schema } from "@effect/schema"
 
-const schema = Schema.Struct({
-  name: Schema.NonEmpty.annotations({ identifier: "Name" }), // refinement
-  age: Schema.Positive.pipe(Schema.int({ identifier: "Age" })) // refinement
+const Name = Schema.NonEmpty.annotations({ identifier: "Name" }) // refinement
+
+const Age = Schema.Positive.pipe(Schema.int({ identifier: "Age" })) // refinement
+
+const Person = Schema.Struct({
+  name: Name,
+  age: Age
 }).annotations({ identifier: "Person" })
 
-// "from" failure
-Schema.decodeUnknownSync(schema)({ name: null, age: 18 })
+// From side failure
+Schema.decodeUnknownSync(Person)({ name: null, age: 18 })
 /*
 throws:
 Error: Person
@@ -10390,8 +10882,8 @@ Error: Person
          └─ Expected a string, actual null
 */
 
-// predicate failure
-Schema.decodeUnknownSync(schema)({ name: "", age: 18 })
+// Predicate refinement failure
+Schema.decodeUnknownSync(Person)({ name: "", age: 18 })
 /*
 throws:
 Error: Person
@@ -10402,11 +10894,65 @@ Error: Person
 */
 ```
 
-In the first example, the error message indicates a "from" side refinement failure in the "Name" property, specifying that a string was expected but received null. In the second example, a predicate refinement failure is reported, indicating that a non-empty string was expected for "Name," but an empty string was provided.
+In the first example, the error message indicates a "from side" refinement failure in the `name` property, specifying that a string was expected but received `null`. In the second example, a "predicate" refinement failure is reported, indicating that a non-empty string was expected for `name` but an empty string was provided.
+
+###### Transformations
+
+Transformations between different types or formats can occasionally result in errors. The system provides a structured error message to specify where the error occurred:
+
+- **Encoded Side Failure:** Errors on this side typically indicate that the input to the transformation does not match the expected initial type or format. For example, receiving a `null` when a `string` is expected.
+- **Transformation Process Failure:** This type of error arises when the transformation logic itself fails, such as when the input does not meet the criteria specified within the transformation functions.
+- **Type Side Failure:** Occurs when the output of a transformation does not meet the schema requirements on the decoded side. This can happen if the transformed value fails subsequent validations or conditions.
+
+```ts
+import { ParseResult, Schema } from "@effect/schema"
+
+const schema = Schema.transformOrFail(
+  Schema.String,
+  Schema.String.pipe(Schema.minLength(2)),
+  {
+    strict: true,
+    decode: (s, _, ast) =>
+      s.length > 0
+        ? ParseResult.succeed(s)
+        : ParseResult.fail(new ParseResult.Type(ast, s)),
+    encode: ParseResult.succeed
+  }
+)
+
+// Encoded side failure
+Schema.decodeUnknownSync(schema)(null)
+/*
+throws:
+ParseError: (string <-> string)
+└─ Encoded side transformation failure
+   └─ Expected string, actual null
+*/
+
+// transformation failure
+Schema.decodeUnknownSync(schema)("")
+/*
+throws:
+ParseError: (string <-> string)
+└─ Transformation process failure
+   └─ Expected (string <-> string), actual ""
+*/
+
+// Type side failure
+Schema.decodeUnknownSync(schema)("a")
+/*
+throws:
+ParseError: (string <-> a string at least 2 character(s) long)
+└─ Type side transformation failure
+   └─ a string at least 2 character(s) long
+      └─ Predicate refinement failure
+         └─ Expected a string at least 2 character(s) long, actual "a"
+*/
+```
 
 ###### Custom Error Messages
 
-Custom messages can be set using the `message` annotation:
+You have the capability to define custom error messages specifically tailored for different parts of your schema using the `message` annotation. This allows developers to provide more context-specific feedback which can improve the debugging and validation processes.
 
 ```ts
 type MessageAnnotation = (issue: ParseIssue) =>
@@ -10418,6 +10964,10 @@ type MessageAnnotation = (issue: ParseIssue) =>
     }
 ```
 
+- **String**: A straightforward message that describes the error.
+- **Effect<string>**: Allows for dynamic error messages that might depend on **synchronous** processes or **optional** dependencies.
+- **Object with `message` and `override`**: Allows you to define a specific error message along with a boolean flag (`override`). This flag determines if the custom message should supersede any default or nested custom messages, providing precise control over the error output displayed to users.
+
 Here's a simple example of how to set a custom message for the built-in `String` schema:
 
 ```ts
@@ -10426,6 +10976,12 @@ import { Schema } from "@effect/schema"
 const MyString = Schema.String.annotations({
   message: () => "my custom message"
 })
+
+Schema.decodeUnknownSync(MyString)(null)
+/*
+throws:
+ParseError: my custom message
+*/
 ```
 
 ###### General Guidelines for Messages
@@ -10449,9 +11005,13 @@ const MyString = Schema.String.annotations({
   message: () => "my custom message"
 })
 
-const decode = Schema.decodeUnknownEither(MyString)
+const decode = Schema.decodeUnknownSync(MyString)
 
-console.log(decode(null)) // "my custom message"
+try {
+  decode(null)
+} catch (e: any) {
+  console.log(e.message) // "my custom message"
+}
 ```
 
 ###### Refinements
@@ -10469,11 +11029,40 @@ const MyString = Schema.String.pipe(
   message: () => "my custom message"
 })
 
-const decode = Schema.decodeUnknownEither(MyString)
+const decode = Schema.decodeUnknownSync(MyString)
 
-console.log(decode(null)) // "Expected a string, actual null"
-console.log(decode("")) // `Expected a string at least 1 character(s) long, actual ""`
-console.log(decode("abc")) // "my custom message"
+try {
+  decode(null)
+} catch (e: any) {
+  console.log(e.message)
+  /*
+  a string at most 2 character(s) long
+  └─ From side refinement failure
+    └─ a string at least 1 character(s) long
+        └─ From side refinement failure
+          └─ Expected string, actual null
+  */
+}
+
+try {
+  decode("")
+} catch (e: any) {
+  console.log(e.message)
+  /*
+  a string at most 2 character(s) long
+  └─ From side refinement failure
+    └─ a string at least 1 character(s) long
+        └─ Predicate refinement failure
+          └─ Expected a string at least 1 character(s) long, actual ""
+  */
+}
+
+try {
+  decode("abc")
+} catch (e: any) {
+  console.log(e.message)
+  // "my custom message"
+}
 ```
 
 When setting multiple override messages, the one corresponding to the **first** failed predicate is used, starting from the innermost refinement to the outermost:
@@ -10491,11 +11080,25 @@ const MyString = Schema.String
     Schema.maxLength(2, { message: () => "maxLength custom message" })
   )
 
-const decode = Schema.decodeUnknownEither(MyString)
+const decode = Schema.decodeUnknownSync(MyString)
 
-console.log(decode(null)) // "String custom message"
-console.log(decode("")) // "minLength custom message"
-console.log(decode("abc")) // "maxLength custom message"
+try {
+  decode(null)
+} catch (e: any) {
+  console.log(e.message) // String custom message
+}
+
+try {
+  decode("")
+} catch (e: any) {
+  console.log(e.message) // minLength custom message
+}
+
+try {
+  decode("abc")
+} catch (e: any) {
+  console.log(e.message) // maxLength custom message
+}
 ```
 
 You have the option to change the default behavior by setting the `override` flag to `true`. This is useful when you want to create a single comprehensive custom message that describes the required properties of a valid value without displaying default messages.
@@ -10511,11 +11114,25 @@ const MyString = Schema.String.pipe(
   message: () => ({ message: "my custom message", override: true })
 })
 
-const decode = Schema.decodeUnknownEither(MyString)
+const decode = Schema.decodeUnknownSync(MyString)
 
-console.log(decode(null)) // "my custom message"
-console.log(decode("")) // "my custom message"
-console.log(decode("abc")) // "my custom message"
+try {
+  decode(null)
+} catch (e: any) {
+  console.log(e.message) // my custom message
+}
+
+try {
+  decode("")
+} catch (e: any) {
+  console.log(e.message) // my custom message
+}
+
+try {
+  decode("abc")
+} catch (e: any) {
+  console.log(e.message) // my custom message
+}
 ```
 
 ###### Transformations
@@ -10531,6 +11148,7 @@ const IntFromString = Schema.transformOrFail(
   // This message is displayed only if the input can be converted to a number but it's not an integer
   Schema.Int.annotations({ message: () => "please enter an integer" }),
   {
+    strict: true,
     decode: (s, _, ast) => {
       const n = Number(s)
       return Number.isNaN(n)
@@ -10543,11 +11161,25 @@ const IntFromString = Schema.transformOrFail(
   // This message is displayed only if the input cannot be converted to a number
   .annotations({ message: () => "please enter a parseable string" })
 
-const decode = Schema.decodeUnknownEither(IntFromString)
+const decode = Schema.decodeUnknownSync(IntFromString)
 
-console.log(decode(null)) // "please enter a string"
-console.log(decode("1.2")) // "please enter an integer"
-console.log(decode("not a number")) // "please enter a parseable string"
+try {
+  decode(null)
+} catch (e: any) {
+  console.log(e.message) // please enter a string
+}
+
+try {
+  decode("1.2")
+} catch (e: any) {
+  console.log(e.message) // please enter an integer
+}
+
+try {
+  decode("not a number")
+} catch (e: any) {
+  console.log(e.message) // please enter a parseable string
+}
 ```
 
 ###### Compound Schemas
@@ -10564,8 +11196,9 @@ const schema = Schema.Struct({
       Schema.Struct({
         id: Schema.String,
         text: pipe(
-          Schema.String,
-          Schema.message(() => "error_invalid_outcome_type"),
+          Schema.String.annotations({
+            message: () => "error_invalid_outcome_type"
+          }),
           Schema.minLength(1, { message: () => "error_required_field" }),
           Schema.maxLength(50, { message: () => "error_max_length_field" })
         )
@@ -10580,7 +11213,7 @@ Schema.decodeUnknownSync(schema, { errors: "all" })({
 })
 /*
 throws
-Error: { outcomes: an array of at least 1 items }
+ParseError: { readonly outcomes: an array of at least 1 items }
 └─ ["outcomes"]
    └─ error_min_length_field
 */
@@ -10594,17 +11227,17 @@ Schema.decodeUnknownSync(schema, { errors: "all" })({
 })
 /*
 throws
-Error: { outcomes: an array of at least 1 items }
+ParseError: { readonly outcomes: an array of at least 1 items }
 └─ ["outcomes"]
    └─ an array of at least 1 items
       └─ From side refinement failure
-         └─ ReadonlyArray<{ id: string; text: a string at most 50 character(s) long }>
+         └─ ReadonlyArray<{ readonly id: string; readonly text: a string at most 50 character(s) long }>
             ├─ [0]
-            │  └─ { id: string; text: a string at most 50 character(s) long }
+            │  └─ { readonly id: string; readonly text: a string at most 50 character(s) long }
             │     └─ ["text"]
             │        └─ error_required_field
             └─ [2]
-               └─ { id: string; text: a string at most 50 character(s) long }
+               └─ { readonly id: string; readonly text: a string at most 50 character(s) long }
                   └─ ["text"]
                      └─ error_max_length_field
 */
@@ -11681,10 +12314,10 @@ type MyStructReturnType<X extends Schema.Schema.All> = Schema.Schema.Type<
   ReturnType<typeof MyStruct<X>>
 >
 
-// In the function body, `obj` has type `Simplify<Schema.Struct.Type<{ x: X; }>>`
+// In the function body, `obj` has type `{ [K in keyof Schema.Struct.Type<{ x: X; }>]: Schema.Struct.Type<{ x: X; }>[K]; }`
 // so it's not possible to access the `x` field
 function test<X extends Schema.Schema.All>(obj: MyStructReturnType<X>) {
-  obj.x // error: Property 'x' does not exist on type 'Simplify<Type<{ x: X; }>>'.ts(2339)
+  obj.x // error: Property 'x' does not exist on type '{ [K in keyof Type<{ x: X; }>]: Type<{ x: X; }>[K]; }'.ts(2339)
 }
 ```
 
@@ -12183,6 +12816,42 @@ console.log(
 ) // Map(3) { 'a' => '1', 'b' => '2', 'c' => '3' }
 ```
 
+###### ReadonlyMapFromRecord
+
+- decoding
+  - `{ readonly [x: string]: VI }` -> `ReadonlyMap<KA, VA>`
+- encoding
+  - `ReadonlyMap<KA, VA>` -> `{ readonly [x: string]: VI }`
+
+```ts
+import { Schema } from "@effect/schema"
+
+const schema = Schema.ReadonlyMapFromRecord({
+  key: Schema.BigInt,
+  value: Schema.NumberFromString
+})
+
+const decode = Schema.decodeUnknownSync(schema)
+const encode = Schema.encodeSync(schema)
+
+console.log(
+  decode({
+    "1": "4",
+    "2": "5",
+    "3": "6"
+  })
+) // Map(3) { 1n => 4, 2n => 5, 3n => 6 }
+console.log(
+  encode(
+    new Map([
+      [1n, 4],
+      [2n, 5],
+      [3n, 6]
+    ])
+  )
+) // { '1': '4', '2': '5', '3': '6' }
+```
+
 ###### HashSet
 
 ###### HashSet
@@ -12554,6 +13223,276 @@ console.log(decode(null)) // throws Error: Expected Redacted(<redacted>), actual
 
 It's important to note that when successfully decoding a `Redacted`, the output is intentionally obscured (`{}`) to prevent the actual secret from being revealed in logs or console outputs.
 
+###### Serializable
+
+###### Serializable trait
+
+The `Serializable` trait, part of the `@effect/schema/Serializable` module, enables objects to have self-contained schema(s) for serialization. This functionality is particularly beneficial in scenarios where objects need to be consistently serialized and deserialized across various runtime environments or sent over network communications.
+
+**Example: Implementing the Serializable Trait**
+
+```ts
+import { Schema, Serializable } from "@effect/schema"
+import { Effect } from "effect"
+
+class Person {
+  constructor(
+    readonly id: number,
+    readonly name: string,
+    readonly createdAt: Date
+  ) {}
+
+  static FromEncoded = Schema.transform(
+    Schema.Struct({
+      id: Schema.Number,
+      name: Schema.String,
+      createdAt: Schema.Date
+    }),
+    Schema.instanceOf(Person),
+    {
+      decode: ({ createdAt, id, name }) => new Person(id, name, createdAt),
+      encode: ({ createdAt, id, name }) => ({ id, name, createdAt })
+    }
+  )
+
+  get [Serializable.symbol]() {
+    return Person.FromEncoded
+  }
+}
+
+const person = new Person(1, "John", new Date(0))
+
+// ----------------
+// serialization
+// ----------------
+
+const serialized = Effect.runSync(Serializable.serialize(person))
+console.log(serialized)
+// { id: 1, name: 'John', createdAt: '1970-01-01T00:00:00.000Z' }
+
+// ----------------
+// deserialization
+// ----------------
+
+const deserialized = Schema.decodeUnknownSync(Person.FromEncoded)(serialized)
+console.log(deserialized)
+// Person { id: 1, name: 'John', createdAt: 1970-01-01T00:00:00.000Z }
+
+// if you have access to a Person instance you can use `Serializable.deserialize` to deserialize
+const deserializedUsingAnInstance = Effect.runSync(
+  Serializable.deserialize(person, serialized)
+)
+console.log(deserializedUsingAnInstance)
+// Person { id: 1, name: 'John', createdAt: 1970-01-01T00:00:00.000Z }
+```
+
+###### WithResult trait
+
+The `WithResult` trait is designed to encapsulate the outcome of an operation, distinguishing between success and failure cases. Each case is associated with a schema that defines the structure and types of the success or failure data.
+
+The primary aim of this trait is to model and serialize the function signature:
+
+```ts
+(arg: A): Exit<Success, Failure>
+```
+
+To achieve this, schemas need to be defined for the following:
+
+- **The Argument**: Represented as `Schema<A, I, R>`, this schema handles the input data type `A`, its serialized form `I`, and the associated context `R`.
+- **The Success Case**: This is defined by `Schema<Success, SuccessEncoded, SuccessAndFailureR>`, specifying the structure for a successful outcome along with its encoded form for serialization.
+- **The Failure Case**: Similar to the success schema but for failures, represented by `Schema<Failure, FailureEncoded, SuccessAndFailureR>`.
+
+The process for using `WithResult` in a practical scenario involves a series of steps, encapsulating a full roundtrip communication:
+
+1. **Start with a Value of Type `A`**: Begin with your initial value which is of type `A`.
+2. **Serialize to `I`**: Convert the initial value `A` into its serialized form `I`.
+3. **Send Over the Wire**: The serialized value `I` is sent to a receiving end through network communication.
+4. **Deserialization to `A`**: Upon receipt, the value `I` is deserialized back to type `A`.
+5. **Process and Determine Outcome**: The receiver processes the deserialized value `A` and determines the result as either a success or failure, represented as `Exit<Success, Failure>`.
+6. **Serialize the Result**: The outcome is then serialized into `Exit<SuccessEncoded, FailureEncoded>` for transmission.
+7. **Send Back Over the Wire**: This serialized result is sent back to the original sender.
+8. **Final Deserialization**: The sender deserializes the received result back into its original detailed types `Exit<Success, Failure>`.
+
+```mermaid
+sequenceDiagram
+    Sender->>SenderBound: encodes A to I
+    SenderBound-->>ReceiverBound: send I
+    ReceiverBound->>Receiver: decodes I to A
+    Receiver->>ReceiverBound: encodes Exit<Success, Failure><br/>to Exit<SuccessEncoded, FailureEncoded>
+    ReceiverBound-->>SenderBound: send back<br/>Exit<SuccessEncoded, FailureEncoded>
+    SenderBound->>Sender: decodes Exit<SuccessEncoded, FailureEncoded><br/>to Exit<Success, Failure>
+```
+
+**Example**
+
+```ts
+import type { ParseResult } from "@effect/schema"
+import { Schema, Serializable } from "@effect/schema"
+import { Effect, Exit } from "effect"
+
+class Person {
+  constructor(
+    readonly id: number,
+    readonly name: string,
+    readonly createdAt: Date
+  ) {}
+
+  static FromEncoded = Schema.transform(
+    Schema.Struct({
+      id: Schema.Number,
+      name: Schema.String,
+      createdAt: Schema.Date
+    }),
+    Schema.instanceOf(Person),
+    {
+      decode: ({ createdAt, id, name }) => new Person(id, name, createdAt),
+      encode: ({ createdAt, id, name }) => ({ id, name, createdAt })
+    }
+  )
+
+  get [Serializable.symbol]() {
+    return Person.FromEncoded
+  }
+}
+
+class GetPersonById {
+  constructor(readonly id: number) {}
+
+  static FromEncoded = Schema.transform(
+    Schema.Number,
+    Schema.instanceOf(GetPersonById),
+    {
+      decode: (id) => new GetPersonById(id),
+      encode: ({ id }) => id
+    }
+  )
+
+  get [Serializable.symbol]() {
+    return GetPersonById.FromEncoded
+  }
+
+  // WithResult implementation
+  get [Serializable.symbolResult]() {
+    return {
+      Success: Person.FromEncoded,
+      Failure: Schema.String
+    }
+  }
+}
+
+function handleGetPersonById(
+  serializedReq: typeof GetPersonById.FromEncoded.Encoded
+) {
+  return Effect.gen(function* () {
+    const req = yield* Schema.decodeUnknown(GetPersonById.FromEncoded)(
+      serializedReq
+    )
+    return yield* Serializable.serializeExit(
+      req,
+      req.id === 0
+        ? Exit.fail("User not found")
+        : Exit.succeed(new Person(req.id, "John", new Date()))
+    )
+  })
+}
+
+const roundtrip = (
+  req: GetPersonById
+): Effect.Effect<Exit.Exit<Person, string>, ParseResult.ParseError> =>
+  Effect.gen(function* () {
+    const serializedReq = yield* Serializable.serialize(req)
+    const exit = yield* handleGetPersonById(serializedReq)
+    return yield* Serializable.deserializeExit(req, exit)
+  })
+
+console.log(Effect.runSync(roundtrip(new GetPersonById(1))))
+/*
+Output:
+{
+  _id: 'Exit',
+  _tag: 'Success',
+  value: Person { id: 1, name: 'John', createdAt: 2024-07-02T17:40:59.666Z }
+}
+*/
+
+console.log(Effect.runSync(roundtrip(new GetPersonById(0))))
+/*
+Output:
+{
+  _id: 'Exit',
+  _tag: 'Failure',
+  cause: { _id: 'Cause', _tag: 'Fail', failure: 'User not found' }
+}
+*/
+```
+
+###### Streamlining Code with Schema.Class and Schema.TaggedRequest
+
+The previous example, although illustrative of the underlying mechanisms, involves considerable boilerplate code. To simplify development, we can utilize two specifically designed APIs: `Schema.Class` for modeling the `Person` class and `Schema.TaggedRequest` for modeling the `GetPersonById` operation.
+
+```ts
+import type { ParseResult } from "@effect/schema"
+import { Schema, Serializable } from "@effect/schema"
+import { Effect, Exit } from "effect"
+
+class Person extends Schema.Class<Person>("Person")({
+  id: Schema.Number,
+  name: Schema.String,
+  createdAt: Schema.Date
+}) {}
+
+// Represents the serializable function: `(arg: { readonly id: number }) => Exit<Person, string>`
+class GetPersonById extends Schema.TaggedRequest<GetPersonById>()(
+  "GetPersonById",
+  Schema.String, // Failure schema
+  Person, // Success schema
+  { id: Schema.Number } // Argument schema
+) {}
+
+function handleGetPersonById(serializedReq: typeof GetPersonById.Encoded) {
+  return Effect.gen(function* () {
+    const req = yield* Schema.decodeUnknown(GetPersonById)(serializedReq)
+    return yield* Serializable.serializeExit(
+      req,
+      req.id === 0
+        ? Exit.fail("User not found")
+        : Exit.succeed(
+            new Person({ id: req.id, name: "John", createdAt: new Date() })
+          )
+    )
+  })
+}
+
+const roundtrip = (
+  req: GetPersonById
+): Effect.Effect<Exit.Exit<Person, string>, ParseResult.ParseError> =>
+  Effect.gen(function* () {
+    const serializedReq = yield* Serializable.serialize(req)
+    const exit = yield* handleGetPersonById(serializedReq)
+    return yield* Serializable.deserializeExit(req, exit)
+  })
+
+console.log(Effect.runSync(roundtrip(new GetPersonById({ id: 1 }))))
+/*
+Output:
+{
+  _id: 'Exit',
+  _tag: 'Success',
+  value: Person { id: 1, name: 'John', createdAt: 2024-07-02T17:40:59.666Z }
+}
+*/
+
+console.log(Effect.runSync(roundtrip(new GetPersonById({ id: 0 }))))
+/*
+Output:
+{
+  _id: 'Exit',
+  _tag: 'Failure',
+  cause: { _id: 'Cause', _tag: 'Fail', failure: 'User not found' }
+}
+*/
+```
+
 ###### Useful Examples
 
 ###### Email
@@ -12611,6 +13550,7 @@ const NormalizeUrlString = Schema.transformOrFail(
   Schema.String,
   NormalizedUrlString,
   {
+    strict: true,
     decode: (value, _, ast) =>
       ParseResult.try({
         try: () => new URL(value).toString(),
@@ -12691,9 +13631,88 @@ const pair = <A, I, R>(
   Schema.Tuple(schema, schema)
 ```
 
+###### FAQ
+
+###### Is it Possible to Extend Functionality Beyond Built-in APIs?
+
+If your needs aren't addressed by the existing built-in APIs, you have the option to craft your own API using the built-in APIs as a foundation. If these still don't suffice, you can delve into the lower-level APIs provided by the `@effect/schema/AST` module.
+
+To develop a robust custom API, you need to address two primary challenges:
+
+1. **Type-level challenge**: Can you define the TypeScript signature for your API?
+2. **Runtime-level challenge**: Can you implement your API at runtime using either the `Schema` or `AST` module APIs?
+
+Let's explore a practical example: "Is it possible to make all fields of a struct nullable?"
+
+**Defining the API Signature in TypeScript**
+
+First, let's determine if we can define the API's TypeScript signature:
+
+```ts
+import { Schema } from "@effect/schema"
+
+const nullableFields = <Fields extends { readonly [x: string]: Schema.Schema.Any }>(
+  schema: Schema.Struct<Fields>
+): Schema.Struct<{ [K in keyof Fields]: Schema.NullOr<Fields[K]> }>
+
+// Example use
+
+/*
+const schema: Schema.Struct<{
+    name: Schema.NullOr<typeof Schema.String>;
+    age: Schema.NullOr<typeof Schema.Number>;
+}>
+*/
+const schema = nullableFields(Schema.Struct({
+  name: Schema.String,
+  age: Schema.Number
+}))
+```
+
+You can preliminarily define the signature of `nullableFields` using TypeScript's `declare` keyword, allowing you to immediately test its validity (at the type-level, initially). The example above confirms that the API behaves as expected by inspecting a schema that utilizes this new API.
+
+```ts
+const schema: Schema.Struct<{
+  name: Schema.NullOr<typeof Schema.String>
+  age: Schema.NullOr<typeof Schema.Number>
+}>
+```
+
+**Implementing the API at Runtime**
+
+```ts
+import { Schema } from "@effect/schema"
+import { Record } from "effect"
+
+const nullableFields = <
+  Fields extends { readonly [x: string]: Schema.Schema.Any }
+>(
+  schema: Schema.Struct<Fields>
+): Schema.Struct<{ [K in keyof Fields]: Schema.NullOr<Fields[K]> }> => {
+  return Schema.Struct(
+    Record.map(schema.fields, (schema) => Schema.NullOr(schema)) as any as {
+      [K in keyof Fields]: Schema.NullOr<Fields[K]>
+    }
+  )
+}
+
+const schema = nullableFields(
+  Schema.Struct({
+    name: Schema.String,
+    age: Schema.Number
+  })
+)
+
+console.log(Schema.decodeUnknownSync(schema)({ name: "a", age: null }))
+/*
+Output:
+{ name: 'a', age: null }
+*/
+```
+
 ###### Comparisons
 
-###### Zod
+###### Zod (v3)
 
 Feature-wise, `schema` can do practically everything that `zod` can do.
 
@@ -13291,7 +14310,7 @@ const DogWithBreed = Dog.pipe(
   )
 )
 
-// or simply
+// or (recommended)
 
 const DogWithBreed = S.Struct({
   ...Dog.fields,
@@ -13324,9 +14343,9 @@ const Recipe = S.Struct({
   ingredients: S.Array(S.String)
 })
 
-const JustTheName = Recipe.pipe(S.pick("name"))
+const JustTheName = Recipe.pick("name")
 
-const NoIDRecipe = Recipe.pipe(S.omit("id"))
+const NoIDRecipe = Recipe.omit("id")
 ```
 
 ###### partial
@@ -13807,9 +14826,7 @@ z.custom
 
 Schema
 
-```ts
-S.declare
-```
+[`S.declare`](#declaring-new-data-types) function
 
 ###### refine / superRefine
 
@@ -13819,7 +14836,7 @@ Zod
 
 Schema
 
-`S.filter` / `S.transformOrFail` functions
+[`S.filter`](#filters) / [`S.filterEffect`](#effectful-filters) functions
 
 ###### transform
 
@@ -13829,7 +14846,7 @@ Zod
 
 Schema
 
-`S.transform` function
+[`S.transform`](#transform) / [`S.transformOrFail`](#transformorfail) functions
 
 ###### describe
 
@@ -14959,11 +15976,11 @@ it.effect("retrying until success or timeout", () =>
 ###### 0001_create_people.ts
 
 ```typescript
-import * as Sql from "@effect/sql-mssql"
+import { MssqlClient } from "@effect/sql-mssql"
 import { Effect } from "effect"
 
 export default Effect.flatMap(
-  Sql.client.MssqlClient,
+  MssqlClient.MssqlClient,
   (sql) =>
     sql`CREATE TABLE people (
       id INT IDENTITY(1,1) PRIMARY KEY,
@@ -14979,23 +15996,22 @@ export default Effect.flatMap(
 ```typescript
 import * as DevTools from "@effect/experimental/DevTools"
 import { NodeFileSystem } from "@effect/platform-node"
-import * as Mssql from "@effect/sql-mssql"
+import { MssqlClient, MssqlMigrator, MssqlTypes, Procedure } from "@effect/sql-mssql"
 import { Config, Effect, Layer, Logger, LogLevel, Redacted, String } from "effect"
 import { pipe } from "effect/Function"
 import { fileURLToPath } from "node:url"
 
 const peopleProcedure = pipe(
-  Mssql.procedure.make("people_proc"),
-  Mssql.procedure.param<string>()("name", Mssql.types.VarChar),
-  Mssql.procedure.withRows<{ readonly id: number; readonly name: string }>(),
-  Mssql.procedure.compile
+  Procedure.make("people_proc"),
+  Procedure.param<string>()("name", MssqlTypes.VarChar),
+  Procedure.withRows<{ readonly id: number; readonly name: string }>(),
+  Procedure.compile
 )
 
-const program = Effect.gen(function*(_) {
-  const sql = yield* _(Mssql.client.MssqlClient)
+const program = Effect.gen(function*() {
+  const sql = yield* MssqlClient.MssqlClient
 
-  yield* _(
-    sql`
+  yield* sql`
       CREATE OR ALTER PROC people_proc
         @name VARCHAR(255)
       AS
@@ -15003,30 +16019,26 @@ const program = Effect.gen(function*(_) {
         SELECT * FROM people WHERE name = @name
       END
     `
-  )
 
   // Insert
-  const [inserted] = yield* _(
-    sql`INSERT INTO ${sql("people")} ${
-      sql.insert({
-        name: "Tim",
-        createdAt: new Date()
-      }).returning("*")
-    }`
-  )
+  const [inserted] = yield* sql`INSERT INTO ${sql("people")} ${
+    sql.insert({
+      name: "Tim",
+      createdAt: new Date()
+    }).returning("*")
+  }`
+
   console.log(inserted)
 
   console.log(
-    yield* _(
-      Effect.all(
-        [
-          sql`SELECT TOP(3) * FROM ${sql("people")}`,
-          sql`SELECT TOP(3) * FROM ${sql("people")}`.values,
-          sql`SELECT TOP(3) * FROM ${sql("people")}`.withoutTransform,
-          sql.call(peopleProcedure({ name: "Tim" }))
-        ],
-        { concurrency: "unbounded" }
-      )
+    yield* Effect.all(
+      [
+        sql`SELECT TOP(3) * FROM ${sql("people")}`,
+        sql`SELECT TOP(3) * FROM ${sql("people")}`.values,
+        sql`SELECT TOP(3) * FROM ${sql("people")}`.withoutTransform,
+        sql.call(peopleProcedure({ name: "Tim" }))
+      ],
+      { concurrency: "unbounded" }
     )
   )
 
@@ -15040,7 +16052,7 @@ const program = Effect.gen(function*(_) {
   )
 
   console.log(
-    yield* _(
+    yield* pipe(
       sql`SELECT TOP(3) * FROM ${sql("people")}`,
       Effect.zipRight(
         Effect.catchAllCause(
@@ -15056,13 +16068,13 @@ const program = Effect.gen(function*(_) {
   )
 })
 
-const SqlLive = Mssql.migrator.layer({
-  loader: Mssql.migrator.fromFileSystem(
+const SqlLive = MssqlMigrator.layer({
+  loader: MssqlMigrator.fromFileSystem(
     fileURLToPath(new URL("./migrations", import.meta.url))
   )
 }).pipe(
   Layer.provideMerge(
-    Mssql.client.layer({
+    MssqlClient.layer({
       database: Config.succeed("msdb"),
       server: Config.succeed("localhost"),
       username: Config.succeed("sa"),
@@ -15099,7 +16111,7 @@ import { persisted } from "@effect/experimental/RequestResolver"
 import * as TimeToLive from "@effect/experimental/TimeToLive"
 import { runMain } from "@effect/platform-node/NodeRuntime"
 import { Schema } from "@effect/schema"
-import { Array, Effect, Exit, PrimaryKey, RequestResolver } from "effect"
+import { Array, Effect, Exit, pipe, PrimaryKey, RequestResolver } from "effect"
 
 class User extends Schema.Class<User>("User")({
   id: Schema.Number,
@@ -15117,25 +16129,25 @@ class GetUserById extends Schema.TaggedRequest<GetUserById>()("GetUserById", Sch
   }
 }
 
-Effect.gen(function*(_) {
-  const resolver = yield* _(
-    RequestResolver.fromEffectTagged<GetUserById>()({
-      GetUserById: (reqs) => {
-        console.log("uncached requests", reqs.length)
-        return Effect.forEach(reqs, (req) => Effect.succeed(new User({ id: req.id, name: "John" })))
-      }
-    }),
+const program = Effect.gen(function*() {
+  const resolver = yield* RequestResolver.fromEffectTagged<GetUserById>()({
+    GetUserById: (reqs) => {
+      console.log("uncached requests", reqs.length)
+      return Effect.forEach(reqs, (req) => Effect.succeed(new User({ id: req.id, name: "John" })))
+    }
+  }).pipe(
     persisted("users")
   )
 
-  const users = yield* _(
-    Effect.forEach(Array.range(1, 5), (id) => Effect.request(new GetUserById({ id }), resolver), {
-      batching: true
-    })
-  )
+  const users = yield* Effect.forEach(Array.range(1, 5), (id) => Effect.request(new GetUserById({ id }), resolver), {
+    batching: true
+  })
 
   console.log(users)
-}).pipe(
+})
+
+pipe(
+  program,
   Effect.scoped,
   Effect.provide(Redis.layerResult({})),
   runMain
@@ -15147,8 +16159,8 @@ Effect.gen(function*(_) {
 
 ```typescript
 import * as DevTools from "@effect/experimental/DevTools"
-import { runMain } from "@effect/platform-node/NodeRuntime"
-import { Effect } from "effect"
+import { NodeRuntime, NodeSocket } from "@effect/platform-node"
+import { Effect, Layer } from "effect"
 
 const program = Effect.log("Hello!").pipe(
   Effect.delay(2000),
@@ -15157,8 +16169,12 @@ const program = Effect.log("Hello!").pipe(
 )
 
 program.pipe(
-  Effect.provide(DevTools.layer()),
-  runMain
+  Effect.provide(
+    DevTools.layerWebSocket().pipe(
+      Layer.provide(NodeSocket.layerWebSocketConstructor)
+    )
+  ),
+  NodeRuntime.runMain
 )
 
 ```
@@ -15168,7 +16184,7 @@ program.pipe(
 ```typescript
 import { Machine } from "@effect/experimental"
 import { runMain } from "@effect/platform-node/NodeRuntime"
-import { Data, Effect, List, Request, Schedule } from "effect"
+import { Data, Effect, List, pipe, Request, Schedule } from "effect"
 
 class SendError extends Data.TaggedError("SendError")<{
   readonly email: string
@@ -15197,22 +16213,22 @@ class Shutdown extends Request.TaggedClass("Shutdown")<
 > {}
 
 const mailer = Machine.makeWith<List.List<SendEmail>>()((_, previous) =>
-  Effect.gen(function*(_) {
-    const ctx = yield* _(Machine.MachineContext)
+  Effect.gen(function*() {
+    const ctx = yield* Machine.MachineContext
     const state = previous ?? List.empty()
 
     if (List.isCons(state)) {
-      yield* _(ctx.unsafeSend(new ProcessEmail()), Effect.replicateEffect(List.size(state)))
+      yield* ctx.unsafeSend(new ProcessEmail()), Effect.replicateEffect(List.size(state))
     }
 
     return Machine.procedures.make(state).pipe(
       Machine.procedures.addPrivate<ProcessEmail>()("ProcessEmail", ({ state }) =>
-        Effect.gen(function*(_) {
+        Effect.gen(function*() {
           if (List.isNil(state)) {
             return [void 0, state]
           }
           const req = state.head
-          yield* _(Effect.log(`Sending email to ${req.email}`), Effect.delay(500))
+          yield* pipe(Effect.log(`Sending email to ${req.email}`), Effect.delay(500))
           return [void 0, state.tail]
         })),
       Machine.procedures.add<SendEmail>()("SendEmail", (ctx) =>
@@ -15229,13 +16245,16 @@ const mailer = Machine.makeWith<List.List<SendEmail>>()((_, previous) =>
   Machine.retry(Schedule.forever)
 )
 
-Effect.gen(function*(_) {
-  const actor = yield* _(Machine.boot(mailer))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new Shutdown()))
-}).pipe(
+const program = Effect.gen(function*() {
+  const actor = yield* Machine.boot(mailer)
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new Shutdown())
+})
+
+pipe(
+  program,
   Effect.scoped,
   runMain
 )
@@ -15248,7 +16267,7 @@ Effect.gen(function*(_) {
 import { Machine } from "@effect/experimental"
 import { runMain } from "@effect/platform-node/NodeRuntime"
 import { Schema } from "@effect/schema"
-import { Effect, List, Schedule } from "effect"
+import { Effect, List, pipe, Schedule } from "effect"
 
 class SendError extends Schema.TaggedError<SendError>()(
   "SendError",
@@ -15285,22 +16304,22 @@ class Shutdown extends Schema.TaggedRequest<Shutdown>()(
 const mailer = Machine.makeSerializable({
   state: Schema.List(SendEmail)
 }, (_, previous) =>
-  Effect.gen(function*(_) {
-    const ctx = yield* _(Machine.MachineContext)
+  Effect.gen(function*() {
+    const ctx = yield* Machine.MachineContext
     const state = previous ?? List.empty()
 
     if (List.isCons(state)) {
-      yield* _(ctx.unsafeSend(new ProcessEmail()), Effect.replicateEffect(List.size(state)))
+      yield* ctx.unsafeSend(new ProcessEmail()), Effect.replicateEffect(List.size(state))
     }
 
     return Machine.serializable.make(state).pipe(
       Machine.serializable.addPrivate(ProcessEmail, ({ state }) =>
-        Effect.gen(function*(_) {
+        Effect.gen(function*() {
           if (List.isNil(state)) {
             return [void 0, state]
           }
           const req = state.head
-          yield* _(Effect.log(`Sending email to ${req.email}`), Effect.delay(500))
+          yield* Effect.log(`Sending email to ${req.email}`), Effect.delay(500)
           return [void 0, state.tail]
         })),
       Machine.serializable.add(SendEmail, (ctx) =>
@@ -15316,13 +16335,16 @@ const mailer = Machine.makeSerializable({
     Machine.retry(Schedule.forever)
   )
 
-Effect.gen(function*(_) {
-  const actor = yield* _(Machine.boot(mailer))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" })))
-  yield* _(actor.send(new Shutdown()))
-}).pipe(
+const program = Effect.gen(function*() {
+  const actor = yield* Machine.boot(mailer)
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new SendEmail({ email: "test@example.com", message: "Hello, World!" }))
+  yield* actor.send(new Shutdown())
+})
+
+pipe(
+  program,
   Effect.scoped,
   runMain
 )
@@ -15340,8 +16362,8 @@ Effect.gen(function*(_) {
 ```typescript
 import * as DevTools from "@effect/experimental/DevTools"
 import * as Schema from "@effect/schema/Schema"
-import * as Sql from "@effect/sql"
-import * as Pg from "@effect/sql-pg"
+import { SqlClient, SqlResolver } from "@effect/sql"
+import { PgClient } from "@effect/sql-pg"
 import { Config, Effect, Layer, String } from "effect"
 
 class Person extends Schema.Class<Person>("Person")({
@@ -15354,25 +16376,25 @@ const InsertPersonSchema = Schema.Struct(Person.fields).pipe(
   Schema.omit("id", "createdAt")
 )
 
-const program = Effect.gen(function*(_) {
-  const sql = yield* Sql.client.Client
+const program = Effect.gen(function*() {
+  const sql = yield* SqlClient.SqlClient
 
   yield* sql`TRUNCATE TABLE people RESTART IDENTITY CASCADE`
 
-  const Insert = yield* Sql.resolver.ordered("InsertPerson", {
+  const Insert = yield* SqlResolver.ordered("InsertPerson", {
     Request: InsertPersonSchema,
     Result: Person,
     execute: (requests) => sql`INSERT INTO people ${sql.insert(requests)} RETURNING people.*`
   })
 
-  const GetById = yield* Sql.resolver.findById("GetPersonById", {
+  const GetById = yield* SqlResolver.findById("GetPersonById", {
     Id: Schema.Number,
     Result: Person,
     ResultId: (result) => result.id,
     execute: (ids) => sql`SELECT * FROM people WHERE id IN ${sql.in(ids)}`
   })
 
-  const GetByName = yield* Sql.resolver.grouped("GetPersonByName", {
+  const GetByName = yield* SqlResolver.grouped("GetPersonByName", {
     Request: Schema.String,
     RequestGroupKey: (_) => _,
     Result: Person,
@@ -15412,7 +16434,7 @@ const program = Effect.gen(function*(_) {
   )
 })
 
-const PgLive = Pg.client.layer({
+const PgLive = PgClient.layer({
   database: Config.succeed("effect_pg_dev"),
   transformQueryNames: Config.succeed(String.camelToSnake),
   transformResultNames: Config.succeed(String.snakeToCamel)
@@ -15437,52 +16459,59 @@ program.pipe(
 ###### http-router.ts
 
 ```typescript
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse,
+  Multipart
+} from "@effect/platform"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpServer"
 import * as Schema from "@effect/schema/Schema"
 import { Effect, Layer, Schedule, Stream } from "effect"
 import { createServer } from "node:http"
 
-const ServerLive = NodeHttpServer.server.layer(() => createServer(), { port: 3000 })
+const ServerLive = NodeHttpServer.layer(() => createServer(), { port: 3000 })
 
-const HttpLive = Http.router.empty.pipe(
-  Http.router.get(
+const HttpLive = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.map(
-      Http.request.ServerRequest,
-      (req) => Http.response.text(req.url)
+      HttpServerRequest.HttpServerRequest,
+      (req) => HttpServerResponse.text(req.url)
     )
   ),
-  Http.router.get(
+  HttpRouter.get(
     "/healthz",
-    Http.response.text("ok").pipe(
-      Http.middleware.withLoggerDisabled
+    HttpServerResponse.text("ok").pipe(
+      HttpMiddleware.withLoggerDisabled
     )
   ),
-  Http.router.post(
+  HttpRouter.post(
     "/upload",
-    Effect.gen(function*(_) {
-      const data = yield* _(Http.request.schemaBodyForm(Schema.Struct({
-        files: Http.multipart.FilesSchema
-      })))
+    Effect.gen(function*() {
+      const data = yield* HttpServerRequest.schemaBodyForm(Schema.Struct({
+        files: Multipart.FilesSchema
+      }))
       console.log("got files", data.files)
-      return Http.response.empty()
-    }).pipe(Effect.scoped)
+      return HttpServerResponse.empty()
+    })
   ),
-  Http.router.get(
+  HttpRouter.get(
     "/ws",
     Stream.fromSchedule(Schedule.spaced(1000)).pipe(
       Stream.map(JSON.stringify),
       Stream.encodeText,
-      Stream.pipeThroughChannel(Http.request.upgradeChannel()),
+      Stream.pipeThroughChannel(HttpServerRequest.upgradeChannel()),
       Stream.decodeText(),
       Stream.runForEach((_) => Effect.log(_)),
       Effect.annotateLogs("ws", "recv"),
-      Effect.as(Http.response.empty())
+      Effect.as(HttpServerResponse.empty())
     )
   ),
-  Http.server.serve(Http.middleware.logger),
-  Http.server.withLogAddress,
+  HttpServer.serve(HttpMiddleware.logger),
+  HttpServer.withLogAddress,
   Layer.provide(ServerLive)
 )
 
@@ -15500,11 +16529,10 @@ import { Console, Effect, Layer, Stream } from "effect"
 
 const EnvLive = NodeFileSystem.layer.pipe(Layer.provide(ParcelWatcher.layer))
 
-Effect.gen(function*(_) {
-  const fs = yield* _(FileSystem.FileSystem)
+Effect.gen(function*() {
+  const fs = yield* FileSystem.FileSystem
 
-  yield* _(
-    fs.watch("src"),
+  yield* fs.watch("src").pipe(
     Stream.runForEach(Console.log)
   )
 }).pipe(Effect.provide(EnvLive), NodeRuntime.runMain)
@@ -15514,17 +16542,15 @@ Effect.gen(function*(_) {
 ###### http-server.ts
 
 ```typescript
+import { HttpServer, HttpServerResponse } from "@effect/platform"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpServer"
-import { Effect, Layer } from "effect"
+import { Layer } from "effect"
 import { createServer } from "node:http"
 
-const ServerLive = NodeHttpServer.server.layer(() => createServer(), { port: 3000 })
+const ServerLive = NodeHttpServer.layer(() => createServer(), { port: 3000 })
 
-const HttpLive = Http.server.serve(Effect.succeed(Http.response.text("Hello World")))
-  .pipe(
-    Layer.provide(ServerLive)
-  )
+const HttpLive = HttpServer.serve(HttpServerResponse.text("Hello World"))
+  .pipe(Layer.provide(ServerLive))
 
 NodeRuntime.runMain(Layer.launch(HttpLive))
 
@@ -15537,17 +16563,17 @@ import { Terminal } from "@effect/platform"
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 import { Console, Effect } from "effect"
 
-const program = Effect.gen(function*(_) {
-  const terminal = yield* _(Terminal.Terminal)
+const program = Effect.gen(function*() {
+  const terminal = yield* Terminal.Terminal
 
-  const line1 = yield* _(terminal.readLine)
-  yield* _(Console.log(`First line: ${line1}`))
+  const line1 = yield* terminal.readLine
+  yield* Console.log(`First line: ${line1}`)
 
-  const line2 = yield* _(terminal.readLine)
-  yield* _(Console.log(`Second line: ${line2}`))
+  const line2 = yield* terminal.readLine
+  yield* Console.log(`Second line: ${line2}`)
 
-  const line3 = yield* _(terminal.readLine)
-  yield* _(Console.log(`Third line: ${line3}`))
+  const line3 = yield* terminal.readLine
+  yield* Console.log(`Third line: ${line3}`)
 })
 
 const MainLive = NodeTerminal.layer
@@ -15566,21 +16592,73 @@ import { WorkerRunner } from "@effect/platform"
 import { NodeRuntime, NodeWorkerRunner } from "@effect/platform-node"
 import { Effect, Layer, Stream } from "effect"
 
-const WorkerLive = Effect.gen(function*(_) {
-  yield* _(WorkerRunner.make((n: number) => Stream.range(0, n)))
-  yield* _(Effect.log("worker started"))
-  yield* _(Effect.addFinalizer(() => Effect.log("worker closed")))
+const WorkerLive = Effect.gen(function*() {
+  yield* WorkerRunner.make((n: number) => Stream.range(0, n))
+  yield* Effect.log("worker started")
+  yield* Effect.addFinalizer(() => Effect.log("worker closed"))
 }).pipe(Layer.scopedDiscard, Layer.provide(NodeWorkerRunner.layer))
 
 NodeRuntime.runMain(Layer.launch(WorkerLive))
 
 ```
 
+###### http-tag-router.ts
+
+```typescript
+import { HttpMiddleware, HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
+import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
+import { Effect, Layer } from "effect"
+import { createServer } from "http"
+
+// You can define router instances using `HttpRouter.Tag`
+class UserRouter extends HttpRouter.Tag("UserRouter")<UserRouter>() {}
+
+// Create `Layer`'s for your routes with `UserRouter.use`
+const GetUsers = UserRouter.use((router) =>
+  Effect.gen(function*() {
+    yield* router.get("/", HttpServerResponse.text("got users"))
+  })
+)
+
+const CreateUser = UserRouter.use((router) =>
+  Effect.gen(function*() {
+    yield* router.post("/", HttpServerResponse.text("created user"))
+  })
+)
+
+// Merge all the routes together with `Layer.mergeAll`
+const AllUserRoutes = Layer.mergeAll(GetUsers, CreateUser).pipe(
+  Layer.provideMerge(UserRouter.Live)
+)
+
+// `HttpRouter.Default` can also be used. Here we combine our `UserRouter` with
+// the default router.
+const AllRoutes = HttpRouter.Default.use((router) =>
+  Effect.gen(function*() {
+    yield* router.mount("/users", yield* UserRouter.router)
+  })
+).pipe(Layer.provide(AllUserRoutes))
+
+const ServerLive = NodeHttpServer.layer(createServer, { port: 3000 })
+
+// use the `.unwrap` api to turn the underlying `HttpRouter` into another layer.
+// Here we use `HttpServer.serve` to create a server from the `HttpRouter`.
+const HttpLive = HttpRouter.Default.unwrap(HttpServer.serve(HttpMiddleware.logger)).pipe(
+  Layer.provide(AllRoutes),
+  Layer.provide(ServerLive)
+)
+
+NodeRuntime.runMain(Layer.launch(HttpLive))
+
+```
+
 ###### http-client.ts
 
 ```typescript
+import type { HttpBody, HttpClientError } from "@effect/platform"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
+import { NodeHttpClient } from "@effect/platform-node"
 import { runMain } from "@effect/platform-node/NodeRuntime"
-import * as Http from "@effect/platform/HttpClient"
 import type * as ParseResult from "@effect/schema/ParseResult"
 import * as Schema from "@effect/schema/Schema"
 import * as Context from "effect/Context"
@@ -15593,7 +16671,7 @@ class Todo extends Schema.Class<Todo>("Todo")({
   title: Schema.String,
   completed: Schema.Boolean
 }) {
-  static decodeResponse = Http.response.schemaBodyJsonScoped(Todo)
+  static decodeResponse = HttpClientResponse.schemaBodyJsonScoped(Todo)
 }
 
 const TodoWithoutId = Schema.Struct(Todo.fields).pipe(Schema.omit("id"))
@@ -15602,21 +16680,21 @@ type TodoWithoutId = Schema.Schema.Type<typeof TodoWithoutId>
 interface TodoService {
   readonly create: (
     _: TodoWithoutId
-  ) => Effect.Effect<Todo, Http.error.HttpClientError | Http.body.BodyError | ParseResult.ParseError>
+  ) => Effect.Effect<Todo, HttpClientError.HttpClientError | HttpBody.HttpBodyError | ParseResult.ParseError>
 }
 const TodoService = Context.GenericTag<TodoService>("@effect/platform-node/examples/TodoService")
 
-const makeTodoService = Effect.gen(function*(_) {
-  const defaultClient = yield* _(Http.client.Client)
+const makeTodoService = Effect.gen(function*() {
+  const defaultClient = yield* HttpClient.HttpClient
   const clientWithBaseUrl = defaultClient.pipe(
-    Http.client.filterStatusOk,
-    Http.client.mapRequest(Http.request.prependUrl("https://jsonplaceholder.typicode.com"))
+    HttpClient.filterStatusOk,
+    HttpClient.mapRequest(HttpClientRequest.prependUrl("https://jsonplaceholder.typicode.com"))
   )
 
-  const addTodoWithoutIdBody = Http.request.schemaBody(TodoWithoutId)
+  const addTodoWithoutIdBody = HttpClientRequest.schemaBody(TodoWithoutId)
   const create = (todo: TodoWithoutId) =>
     addTodoWithoutIdBody(
-      Http.request.post("/todos"),
+      HttpClientRequest.post("/todos"),
       todo
     ).pipe(
       Effect.flatMap(clientWithBaseUrl),
@@ -15627,7 +16705,7 @@ const makeTodoService = Effect.gen(function*(_) {
 })
 
 const TodoServiceLive = Layer.effect(TodoService, makeTodoService).pipe(
-  Layer.provide(Http.client.layer)
+  Layer.provide(NodeHttpClient.layer)
 )
 
 Effect.flatMap(
@@ -15657,21 +16735,19 @@ const PoolLive = Worker.makePoolLayer(Pool, { size: 3 }).pipe(
   Layer.provide(NodeWorker.layer(() => new WT.Worker("./examples/worker/range.ts")))
 )
 
-Effect.gen(function*(_) {
-  const pool = yield* _(Pool)
-  yield* _(
-    Effect.all([
-      pool.execute(5).pipe(
-        Stream.runForEach((_) => Console.log("worker 1", _))
-      ),
-      pool.execute(10).pipe(
-        Stream.runForEach((_) => Console.log("worker 2", _))
-      ),
-      pool.execute(15).pipe(
-        Stream.runForEach((_) => Console.log("worker 3", _))
-      )
-    ], { concurrency: "inherit" })
-  )
+Effect.gen(function*() {
+  const pool = yield* Pool
+  yield* Effect.all([
+    pool.execute(5).pipe(
+      Stream.runForEach((_) => Console.log("worker 1", _))
+    ),
+    pool.execute(10).pipe(
+      Stream.runForEach((_) => Console.log("worker 2", _))
+    ),
+    pool.execute(15).pipe(
+      Stream.runForEach((_) => Console.log("worker 3", _))
+    )
+  ], { concurrency: "inherit" })
 }).pipe(Effect.provide(PoolLive), NodeRuntime.runMain)
 
 ```
@@ -15816,12 +16892,12 @@ const spawner = Effect.randomWith((_) => _.nextIntBetween(500, 1500)).pipe(
   Effect.forever
 )
 
-const program = Effect.gen(function*(_) {
-  yield* _(Effect.fork(incrementCounter))
-  yield* _(Effect.fork(timerLoop))
-  yield* _(Effect.fork(freqLoop))
-  yield* _(Effect.fork(summaryLoop))
-  yield* _(Effect.fork(spawner))
+const program = Effect.gen(function*() {
+  yield* Effect.fork(incrementCounter)
+  yield* Effect.fork(timerLoop)
+  yield* Effect.fork(freqLoop)
+  yield* Effect.fork(summaryLoop)
+  yield* Effect.fork(spawner)
 })
 
 const MetricsLive = NodeSdk.layer(() => ({
@@ -15889,7 +16965,7 @@ console.log(Doc.render(doc, {
 ###### naval-fate.ts
 
 ```typescript
-import { Args, Command, Options } from "@effect/cli"
+import { Args, CliConfig, Command, Options } from "@effect/cli"
 import { NodeContext, NodeKeyValueStore, NodeRuntime } from "@effect/platform-node"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
@@ -15928,12 +17004,12 @@ const shipCommand = Command.make("ship", {
 const newShipCommand = Command.make("new", {
   name: nameArg
 }, ({ name }) =>
-  Effect.gen(function*(_) {
-    const { verbose } = yield* _(shipCommand)
-    yield* _(createShip(name))
-    yield* _(Console.log(`Created ship: '${name}'`))
+  Effect.gen(function*() {
+    const { verbose } = yield* shipCommand
+    yield* createShip(name)
+    yield* Console.log(`Created ship: '${name}'`)
     if (verbose) {
-      yield* _(Console.log(`Verbose mode enabled`))
+      yield* Console.log(`Verbose mode enabled`)
     }
   })).pipe(Command.withDescription("Create a new ship"))
 
@@ -15941,18 +17017,18 @@ const moveShipCommand = Command.make("move", {
   ...nameAndCoordinatesArg,
   speed: speedOption
 }, ({ name, speed, x, y }) =>
-  Effect.gen(function*(_) {
-    yield* _(moveShip(name, x, y))
-    yield* _(Console.log(`Moving ship '${name}' to coordinates (${x}, ${y}) at ${speed} knots`))
+  Effect.gen(function*() {
+    yield* moveShip(name, x, y)
+    yield* Console.log(`Moving ship '${name}' to coordinates (${x}, ${y}) at ${speed} knots`)
   })).pipe(Command.withDescription("Move a ship"))
 
 const shootShipCommand = Command.make(
   "shoot",
   { ...coordinatesArg },
   ({ x, y }) =>
-    Effect.gen(function*(_) {
-      yield* _(shoot(x, y))
-      yield* _(Console.log(`Shot cannons at coordinates (${x}, ${y})`))
+    Effect.gen(function*() {
+      yield* shoot(x, y)
+      yield* Console.log(`Shot cannons at coordinates (${x}, ${y})`)
     })
 ).pipe(Command.withDescription("Shoot from a ship"))
 
@@ -15964,19 +17040,17 @@ const setMineCommand = Command.make("set", {
   ...coordinatesArg,
   moored: mooredOption
 }, ({ moored, x, y }) =>
-  Effect.gen(function*(_) {
-    yield* _(setMine(x, y))
-    yield* _(
-      Console.log(`Set ${moored ? "moored" : "drifting"} mine at coordinates (${x}, ${y})`)
-    )
+  Effect.gen(function*() {
+    yield* setMine(x, y)
+    yield* Console.log(`Set ${moored ? "moored" : "drifting"} mine at coordinates (${x}, ${y})`)
   })).pipe(Command.withDescription("Set a mine at specific coordinates"))
 
 const removeMineCommand = Command.make("remove", {
   ...coordinatesArg
 }, ({ x, y }) =>
-  Effect.gen(function*(_) {
-    yield* _(removeMine(x, y))
-    yield* _(Console.log(`Removing mine at coordinates (${x}, ${y}), if present`))
+  Effect.gen(function*() {
+    yield* removeMine(x, y)
+    yield* Console.log(`Removing mine at coordinates (${x}, ${y}), if present`)
   })).pipe(Command.withDescription("Remove a mine at specific coordinates"))
 
 const command = Command.make("naval_fate").pipe(
@@ -15994,9 +17068,18 @@ const command = Command.make("naval_fate").pipe(
   ])
 )
 
-const MainLayer = NavalFateStore.layer.pipe(
-  Layer.provide(NodeKeyValueStore.layerFileSystem("naval-fate-store")),
-  Layer.merge(NodeContext.layer)
+const ConfigLive = CliConfig.layer({
+  showBuiltIns: false
+})
+
+const NavalFateLive = NavalFateStore.layer.pipe(
+  Layer.provide(NodeKeyValueStore.layerFileSystem("naval-fate-store"))
+)
+
+const MainLayer = Layer.mergeAll(
+  ConfigLive,
+  NavalFateLive,
+  NodeContext.layer
 )
 
 const cli = Command.run(command, {
@@ -16201,15 +17284,15 @@ export interface NavalFateStore {
 
 export const NavalFateStore = Context.GenericTag<NavalFateStore>("NavalFateStore")
 
-export const make = Effect.gen(function*($) {
-  const shipsStore = yield* $(Effect.map(
+export const make = Effect.gen(function*() {
+  const shipsStore = yield* Effect.map(
     KeyValueStore.KeyValueStore,
     (store) => store.forSchema(Schema.ReadonlyMap({ key: Schema.String, value: Ship }))
-  ))
-  const minesStore = yield* $(Effect.map(
+  )
+  const minesStore = yield* Effect.map(
     KeyValueStore.KeyValueStore,
     (store) => store.forSchema(Schema.Array(Mine))
-  ))
+  )
 
   const getShips = shipsStore.get("ships").pipe(
     Effect.map(Option.getOrElse<ReadonlyMap<string, Ship>>(() => new Map())),
@@ -16223,47 +17306,47 @@ export const make = Effect.gen(function*($) {
   const setMines = (mines: ReadonlyArray<Mine>) => minesStore.set("mines", mines).pipe(Effect.orDie)
 
   const createShip: NavalFateStore["createShip"] = (name) =>
-    Effect.gen(function*($) {
-      const oldShips = yield* $(getShips)
+    Effect.gen(function*() {
+      const oldShips = yield* getShips
       const foundShip = Option.fromNullable(oldShips.get(name))
       if (Option.isSome(foundShip)) {
-        return yield* $(Effect.fail(new ShipExistsError({ name })))
+        return yield* Effect.fail(new ShipExistsError({ name }))
       }
       const ship = Ship.create(name)
       const newShips = new Map(oldShips).set(name, ship)
-      yield* $(setShips(newShips))
+      yield* setShips(newShips)
       return ship
     })
 
   const moveShip: NavalFateStore["moveShip"] = (name, x, y) =>
-    Effect.gen(function*($) {
-      const oldShips = yield* $(getShips)
+    Effect.gen(function*() {
+      const oldShips = yield* getShips
       const foundShip = Option.fromNullable(oldShips.get(name))
       if (Option.isNone(foundShip)) {
-        return yield* $(Effect.fail(new ShipNotFoundError({ name, x, y })))
+        return yield* Effect.fail(new ShipNotFoundError({ name, x, y }))
       }
       const shipAtCoords = pipe(
         Arr.fromIterable(oldShips.values()),
         Arr.findFirst((ship) => ship.hasCoordinates(x, y))
       )
       if (Option.isSome(shipAtCoords)) {
-        return yield* $(Effect.fail(
+        return yield* Effect.fail(
           new CoordinatesOccupiedError({ name: shipAtCoords.value.name, x, y })
-        ))
+        )
       }
-      const mines = yield* $(getMines)
+      const mines = yield* getMines
       const mineAtCoords = Arr.findFirst(mines, (mine) => mine.hasCoordinates(x, y))
       const ship = Option.isSome(mineAtCoords)
         ? foundShip.value.move(x, y).destroy()
         : foundShip.value.move(x, y)
       const newShips = new Map(oldShips).set(name, ship)
-      yield* $(setShips(newShips))
+      yield* setShips(newShips)
       return ship
     })
 
   const shoot: NavalFateStore["shoot"] = (x, y) =>
-    Effect.gen(function*($) {
-      const oldShips = yield* $(getShips)
+    Effect.gen(function*() {
+      const oldShips = yield* getShips
       const shipAtCoords = pipe(
         Arr.fromIterable(oldShips.values()),
         Arr.findFirst((ship) => ship.hasCoordinates(x, y))
@@ -16271,28 +17354,28 @@ export const make = Effect.gen(function*($) {
       if (Option.isSome(shipAtCoords)) {
         const ship = shipAtCoords.value.destroy()
         const newShips = new Map(oldShips).set(ship.name, ship)
-        yield* $(setShips(newShips))
+        yield* setShips(newShips)
       }
     })
 
   const setMine: NavalFateStore["setMine"] = (x, y) =>
-    Effect.gen(function*($) {
-      const mines = yield* $(getMines)
+    Effect.gen(function*() {
+      const mines = yield* getMines
       const mineAtCoords = Arr.findFirst(mines, (mine) => mine.hasCoordinates(x, y))
       if (Option.isNone(mineAtCoords)) {
         const mine = Mine.create(x, y)
         const newMines = Arr.append(mines, mine)
-        yield* $(setMines(newMines))
+        yield* setMines(newMines)
       }
     })
 
   const removeMine: NavalFateStore["removeMine"] = (x, y) =>
-    Effect.gen(function*($) {
-      const mines = yield* $(getMines)
+    Effect.gen(function*() {
+      const mines = yield* getMines
       const mineAtCoords = Arr.findFirstIndex(mines, (mine) => mine.hasCoordinates(x, y))
       if (Option.isSome(mineAtCoords)) {
         const newMines = Arr.remove(mines, mineAtCoords.value)
-        yield* $(setMines(newMines))
+        yield* setMines(newMines)
       }
     })
 
@@ -16416,10 +17499,10 @@ export class GetUser extends S.TaggedRequest<GetUser>()("GetUser", S.Never, User
 ###### router.ts
 
 ```typescript
+import { HttpMiddleware, HttpRouter, HttpServer } from "@effect/platform"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import * as Http from "@effect/platform/HttpServer"
 import { Router, Rpc } from "@effect/rpc"
-import { HttpRouter } from "@effect/rpc-http"
+import { HttpRouter as RpcHttpRouter } from "@effect/rpc-http"
 import { Array, Effect, Layer, Stream } from "effect"
 import { createServer } from "http"
 import { GetUser, GetUserIds, User, UserId } from "./schema.js"
@@ -16433,11 +17516,11 @@ const router = Router.make(
 export type UserRouter = typeof router
 
 // Create the http server
-const HttpLive = Http.router.empty.pipe(
-  Http.router.post("/rpc", HttpRouter.toHttpApp(router)),
-  Http.server.serve(Http.middleware.logger),
-  Http.server.withLogAddress,
-  Layer.provide(NodeHttpServer.server.layer(createServer, { port: 3000 }))
+const HttpLive = HttpRouter.empty.pipe(
+  HttpRouter.post("/rpc", RpcHttpRouter.toHttpApp(router)),
+  HttpServer.serve(HttpMiddleware.logger),
+  HttpServer.withLogAddress,
+  Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 }))
 )
 
 Layer.launch(HttpLive).pipe(
@@ -16449,7 +17532,7 @@ Layer.launch(HttpLive).pipe(
 ###### client.ts
 
 ```typescript
-import * as Http from "@effect/platform/HttpClient"
+import { HttpClient, HttpClientRequest } from "@effect/platform"
 import { Resolver } from "@effect/rpc"
 import { HttpResolver } from "@effect/rpc-http"
 import { Console, Effect, Stream } from "effect"
@@ -16458,8 +17541,8 @@ import { GetUser, GetUserIds } from "./schema.js"
 
 // Create the client
 const client = HttpResolver.make<UserRouter>(
-  Http.client.fetchOk.pipe(
-    Http.client.mapRequest(Http.request.prependUrl("http://localhost:3000/rpc"))
+  HttpClient.fetchOk.pipe(
+    HttpClient.mapRequest(HttpClientRequest.prependUrl("http://localhost:3000/rpc"))
   )
 ).pipe(Resolver.toClient)
 
@@ -16482,46 +17565,63 @@ client(new GetUserIds()).pipe(
 ###### http-router.ts
 
 ```typescript
+import {
+  HttpMiddleware,
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerRespondable,
+  HttpServerResponse,
+  Multipart
+} from "@effect/platform"
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
-import * as Http from "@effect/platform/HttpServer"
 import { Schema } from "@effect/schema"
 import { Effect, Layer, Schedule, Stream } from "effect"
 
-const ServerLive = BunHttpServer.server.layer({ port: 3000 })
+const ServerLive = BunHttpServer.layer({ port: 3000 })
 
-const HttpLive = Http.router.empty.pipe(
-  Http.router.get(
+class MyError extends Schema.TaggedError<MyError>()("MyError", {
+  message: Schema.String
+}) {
+  [HttpServerRespondable.symbol]() {
+    return HttpServerResponse.schemaJson(MyError)(this, { status: 403 })
+  }
+}
+
+const HttpLive = HttpRouter.empty.pipe(
+  HttpRouter.get(
     "/",
     Effect.map(
-      Http.request.ServerRequest,
-      (req) => Http.response.text(req.url)
+      HttpServerRequest.HttpServerRequest,
+      (req) => HttpServerResponse.text(req.url)
     )
   ),
-  Http.router.get("/package", Http.response.file("./package.json")),
-  Http.router.get("/sleep", Effect.as(Effect.sleep("10 seconds"), Http.response.empty())),
-  Http.router.post(
+  HttpRouter.get("/package", HttpServerResponse.file("./package.json")),
+  HttpRouter.get("/fail", new MyError({ message: "failed" })),
+  HttpRouter.get("/sleep", Effect.as(Effect.sleep("10 seconds"), HttpServerResponse.empty())),
+  HttpRouter.post(
     "/upload",
-    Effect.gen(function*(_) {
-      const data = yield* _(Http.request.schemaBodyForm(Schema.Struct({
-        files: Http.multipart.FilesSchema
-      })))
+    Effect.gen(function*() {
+      const data = yield* HttpServerRequest.schemaBodyForm(Schema.Struct({
+        files: Multipart.FilesSchema
+      }))
       console.log("got files", data.files)
-      return Http.response.empty()
+      return HttpServerResponse.empty()
     })
   ),
-  Http.router.get(
+  HttpRouter.get(
     "/ws",
     Stream.fromSchedule(Schedule.spaced(1000)).pipe(
       Stream.map(JSON.stringify),
-      Stream.pipeThroughChannel(Http.request.upgradeChannel()),
+      Stream.pipeThroughChannel(HttpServerRequest.upgradeChannel()),
       Stream.decodeText(),
       Stream.runForEach((_) => Effect.log(_)),
       Effect.annotateLogs("ws", "recv"),
-      Effect.as(Http.response.empty())
+      Effect.as(HttpServerResponse.empty())
     )
   ),
-  Http.server.serve(Http.middleware.logger),
-  Http.server.withLogAddress,
+  HttpServer.serve(HttpMiddleware.logger),
+  HttpServer.withLogAddress,
   Layer.provide(ServerLive)
 )
 
@@ -16532,12 +17632,12 @@ BunRuntime.runMain(Layer.launch(HttpLive))
 ###### http-server.ts
 
 ```typescript
+import { HttpServer, HttpServerResponse } from "@effect/platform"
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
-import * as Http from "@effect/platform/HttpServer"
-import { Effect, Layer } from "effect"
+import { Layer } from "effect"
 
-const HttpLive = Http.server.serve(Effect.succeed(Http.response.text("Hello World"))).pipe(
-  Layer.provide(BunHttpServer.server.layer({ port: 3000 }))
+const HttpLive = HttpServer.serve(HttpServerResponse.text("Hello World")).pipe(
+  Layer.provide(BunHttpServer.layer({ port: 3000 }))
 )
 
 BunRuntime.runMain(Layer.launch(HttpLive))
@@ -16551,21 +17651,72 @@ import { BunRuntime, BunWorkerRunner } from "@effect/platform-bun"
 import * as Runner from "@effect/platform/WorkerRunner"
 import { Effect, Layer, Stream } from "effect"
 
-const WorkerLive = Effect.gen(function*(_) {
-  yield* _(Runner.make((n: number) => Stream.range(0, n)))
-  yield* _(Effect.log("worker started"))
-  yield* _(Effect.addFinalizer(() => Effect.log("worker closed")))
+const WorkerLive = Effect.gen(function*() {
+  yield* Runner.make((n: number) => Stream.range(0, n))
+  yield* Effect.log("worker started")
+  yield* Effect.addFinalizer(() => Effect.log("worker closed"))
 }).pipe(Layer.scopedDiscard, Layer.provide(BunWorkerRunner.layer))
 
 BunRuntime.runMain(Layer.launch(WorkerLive))
 
 ```
 
+###### http-tag-router.ts
+
+```typescript
+import { HttpMiddleware, HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform"
+import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
+import { Effect, Layer } from "effect"
+
+// You can define router instances using `HttpRouter.Tag`
+class UserRouter extends HttpRouter.Tag("UserRouter")<UserRouter>() {}
+
+// Create `Layer`'s for your routes with `UserRouter.use`
+const GetUsers = UserRouter.use((router) =>
+  Effect.gen(function*() {
+    yield* router.get("/", HttpServerResponse.text("got users"))
+  })
+)
+
+const CreateUser = UserRouter.use((router) =>
+  Effect.gen(function*() {
+    yield* router.post("/", HttpServerResponse.text("created user"))
+  })
+)
+
+// Merge all the routes together with `Layer.mergeAll`
+const AllUserRoutes = Layer.mergeAll(GetUsers, CreateUser).pipe(
+  Layer.provideMerge(UserRouter.Live)
+)
+
+// `HttpRouter.Default` can also be used. Here we combine our `UserRouter` with
+// the default router.
+const AllRoutes = HttpRouter.Default.use((router) =>
+  Effect.gen(function*() {
+    yield* router.mount("/users", yield* UserRouter.router)
+  })
+).pipe(Layer.provide(AllUserRoutes))
+
+const ServerLive = BunHttpServer.layer({ port: 3000 })
+
+// use the `.unwrap` api to turn the underlying `HttpRouter` into another layer.
+// Here we use `HttpServer.serve` to create a server from the `HttpRouter`.
+const HttpLive = HttpRouter.Default.unwrap(HttpServer.serve(HttpMiddleware.logger)).pipe(
+  HttpServer.withLogAddress,
+  Layer.provide(AllRoutes),
+  Layer.provide(ServerLive)
+)
+
+BunRuntime.runMain(Layer.launch(HttpLive))
+
+```
+
 ###### http-client.ts
 
 ```typescript
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
+import type { HttpBody, HttpClientError } from "@effect/platform"
 import { BunRuntime } from "@effect/platform-bun"
-import * as Http from "@effect/platform/HttpClient"
 import type * as ParseResult from "@effect/schema/ParseResult"
 import * as Schema from "@effect/schema/Schema"
 import { Context, Effect, Layer } from "effect"
@@ -16583,32 +17734,32 @@ type TodoWithoutId = Schema.Schema.Type<typeof TodoWithoutId>
 interface TodoService {
   readonly create: (
     _: TodoWithoutId
-  ) => Effect.Effect<Todo, Http.error.HttpClientError | Http.body.BodyError | ParseResult.ParseError>
+  ) => Effect.Effect<Todo, HttpClientError.HttpClientError | HttpBody.HttpBodyError | ParseResult.ParseError>
 }
 const TodoService = Context.GenericTag<TodoService>("@effect/platform-bun/examples/TodoService")
 
-const makeTodoService = Effect.gen(function*(_) {
-  const defaultClient = yield* _(Http.client.Client)
+const makeTodoService = Effect.gen(function*() {
+  const defaultClient = yield* HttpClient.HttpClient
   const clientWithBaseUrl = defaultClient.pipe(
-    Http.client.filterStatusOk,
-    Http.client.mapRequest(Http.request.prependUrl("https://jsonplaceholder.typicode.com"))
+    HttpClient.filterStatusOk,
+    HttpClient.mapRequest(HttpClientRequest.prependUrl("https://jsonplaceholder.typicode.com"))
   )
 
-  const addTodoWithoutIdBody = Http.request.schemaBody(TodoWithoutId)
+  const addTodoWithoutIdBody = HttpClientRequest.schemaBody(TodoWithoutId)
   const create = (todo: TodoWithoutId) =>
     addTodoWithoutIdBody(
-      Http.request.post("/todos"),
+      HttpClientRequest.post("/todos"),
       todo
     ).pipe(
       Effect.flatMap(clientWithBaseUrl),
-      Http.response.schemaBodyJsonScoped(Todo)
+      HttpClientResponse.schemaBodyJsonScoped(Todo)
     )
 
   return TodoService.of({ create })
 })
 
 const TodoServiceLive = Layer.effect(TodoService, makeTodoService).pipe(
-  Layer.provide(Http.client.layer)
+  Layer.provide(HttpClient.layer)
 )
 
 Effect.flatMap(
@@ -16667,15 +17818,15 @@ Effect.gen(function*() {
 ###### sqlite.ts
 
 ```typescript
-import * as Sql from "@effect/sql"
+import { SqlClient } from "@effect/sql"
 import * as SqliteDrizzle from "@effect/sql-drizzle/Sqlite"
-import * as Sqlite from "@effect/sql-sqlite-node"
+import { SqliteClient } from "@effect/sql-sqlite-node"
 import * as D from "drizzle-orm/sqlite-core"
 import { Config, Effect, Layer } from "effect"
 
 // setup
 
-const SqlLive = Sqlite.client.layer({
+const SqlLive = SqliteClient.layer({
   filename: Config.succeed("test.db")
 })
 const DrizzleLive = SqliteDrizzle.layer.pipe(
@@ -16691,7 +17842,7 @@ const users = D.sqliteTable("users", {
 })
 
 Effect.gen(function*() {
-  const sql = yield* Sql.client.Client
+  const sql = yield* SqlClient.SqlClient
   const db = yield* SqliteDrizzle.SqliteDrizzle
   yield* sql`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)`
   yield* db.delete(users)
@@ -16701,6 +17852,272 @@ Effect.gen(function*() {
 }).pipe(
   Effect.provide(DatabaseLive),
   Effect.runPromise
+)
+
+```
+
+
+
+# cluster-node Examples
+
+###### cluster-node
+
+###### sample-connect.ts
+
+```typescript
+import * as PodsRpc from "@effect/cluster-node/PodsRpc"
+import type * as ShardingServiceRpc from "@effect/cluster-node/ShardingServiceRpc"
+import * as ShardManagerClientRpc from "@effect/cluster-node/ShardManagerClientRpc"
+import * as StorageFile from "@effect/cluster-node/StorageFile"
+import * as Serialization from "@effect/cluster/Serialization"
+import * as Sharding from "@effect/cluster/Sharding"
+import * as ShardingConfig from "@effect/cluster/ShardingConfig"
+import { HttpClient, HttpClientRequest } from "@effect/platform"
+import { NodeHttpClient, NodeRuntime } from "@effect/platform-node"
+import { Resolver } from "@effect/rpc"
+import { HttpResolver } from "@effect/rpc-http"
+import { Effect, Layer, Logger, LogLevel, Ref } from "effect"
+import { CounterEntity, GetCurrent, Increment } from "./sample-common.js"
+
+const liveLayer = Effect.gen(function*() {
+  const messenger = yield* Sharding.messenger(CounterEntity)
+  const idRef = yield* Ref.make(0)
+
+  while (true) {
+    const id = yield* Ref.getAndUpdate(idRef, (_) => _ + 1)
+    const entityId = `entity-${id % 10}`
+
+    yield* messenger.sendDiscard(entityId)(new Increment({ messageId: `increment-${id}` }))
+    const result = yield* messenger.send(entityId)(new GetCurrent({ messageId: `get-count-${id}` }))
+    yield* Effect.logInfo(`Counter ${entityId} is now: ${result}`)
+
+    yield* Effect.sleep(200)
+  }
+}).pipe(
+  Layer.effectDiscard,
+  Layer.provide(Sharding.live),
+  Layer.provide(StorageFile.storageFile),
+  Layer.provide(PodsRpc.podsRpc<never>((podAddress) =>
+    HttpResolver.make<ShardingServiceRpc.ShardingServiceRpc>(
+      HttpClient.fetchOk.pipe(
+        HttpClient.mapRequest(
+          HttpClientRequest.prependUrl(`http://${podAddress.host}:${podAddress.port}/api/rest`)
+        )
+      )
+    ).pipe(Resolver.toClient)
+  )),
+  Layer.provide(ShardManagerClientRpc.shardManagerClientRpc(
+    (shardManagerUri) =>
+      HttpResolver.make<ShardingServiceRpc.ShardingServiceRpc>(
+        HttpClient.fetchOk.pipe(
+          HttpClient.mapRequest(
+            HttpClientRequest.prependUrl(shardManagerUri)
+          )
+        )
+      ).pipe(Resolver.toClient)
+  )),
+  Layer.provide(ShardingConfig.withDefaults({ shardingPort: 54322 })),
+  Layer.provide(Serialization.json),
+  Layer.provide(NodeHttpClient.layerUndici)
+)
+
+Layer.launch(liveLayer).pipe(
+  Logger.withMinimumLogLevel(LogLevel.All),
+  Effect.tapErrorCause(Effect.logError),
+  NodeRuntime.runMain
+)
+
+```
+
+###### sample-common.ts
+
+```typescript
+import * as Message from "@effect/cluster/Message"
+import * as RecipientType from "@effect/cluster/RecipientType"
+import * as Schema from "@effect/schema/Schema"
+
+export class GetCurrent extends Message.TaggedMessage<GetCurrent>()("GetCurrent", Schema.Never, Schema.Number, {
+  messageId: Schema.String
+}, (_) => _.messageId) {
+}
+
+export class Increment extends Message.TaggedMessage<Increment>()("Increment", Schema.Never, Schema.Void, {
+  messageId: Schema.String
+}, (_) => _.messageId) {
+}
+
+export class Decrement extends Message.TaggedMessage<Decrement>()("Decrement", Schema.Never, Schema.Void, {
+  messageId: Schema.String
+}, (_) => _.messageId) {
+}
+
+export const CounterMsg = Schema.Union(
+  Increment,
+  Decrement,
+  GetCurrent
+)
+
+export type CounterMsg = Schema.Schema.Type<typeof CounterMsg>
+
+export const CounterEntity = RecipientType.makeEntityType("Counter", CounterMsg)
+
+```
+
+###### sample-shard.ts
+
+```typescript
+import * as PodsRpc from "@effect/cluster-node/PodsRpc"
+import * as ShardingServiceRpc from "@effect/cluster-node/ShardingServiceRpc"
+import * as ShardManagerClientRpc from "@effect/cluster-node/ShardManagerClientRpc"
+import * as StorageFile from "@effect/cluster-node/StorageFile"
+import * as MessageState from "@effect/cluster/MessageState"
+import * as RecipientBehaviour from "@effect/cluster/RecipientBehaviour"
+import * as Serialization from "@effect/cluster/Serialization"
+import * as Sharding from "@effect/cluster/Sharding"
+import * as ShardingConfig from "@effect/cluster/ShardingConfig"
+import { HttpClient, HttpClientRequest, HttpMiddleware, HttpRouter, HttpServer } from "@effect/platform"
+import { NodeHttpClient, NodeHttpServer, NodeRuntime } from "@effect/platform-node"
+import { Resolver } from "@effect/rpc"
+import { HttpResolver, HttpRouter as RpcHttpRouter } from "@effect/rpc-http"
+import { Context, Effect, Exit, Layer, Logger, LogLevel, Ref } from "effect"
+import { createServer } from "node:http"
+import { CounterEntity } from "./sample-common.js"
+
+const HttpLive = Layer.flatMap(
+  Layer.effect(ShardingConfig.ShardingConfig, ShardingConfig.ShardingConfig),
+  (config) =>
+    HttpRouter.empty.pipe(
+      HttpRouter.post("/api/rest", RpcHttpRouter.toHttpApp(ShardingServiceRpc.router)),
+      HttpServer.serve(HttpMiddleware.logger),
+      HttpServer.withLogAddress,
+      Layer.provide(
+        NodeHttpServer.layer(createServer, {
+          port: Context.get(config, ShardingConfig.ShardingConfig).shardingPort
+        })
+      ),
+      Layer.discard
+    )
+)
+
+const liveLayer = Sharding.registerEntity(
+  CounterEntity
+)(
+  RecipientBehaviour.fromFunctionEffectStateful(
+    () => Effect.succeed(0),
+    (entityId, message, stateRef) => {
+      switch (message._tag) {
+        case "Increment":
+          return Ref.update(stateRef, (count) => count + 1).pipe(
+            Effect.zipLeft(Effect.logInfo(`Counter ${entityId} incremented`)),
+            Effect.as(MessageState.Processed(Exit.void))
+          )
+        case "Decrement":
+          return Ref.update(stateRef, (count) => count - 1).pipe(
+            Effect.zipLeft(Effect.logInfo(`Counter ${entityId} decremented`)),
+            Effect.as(MessageState.Processed(Exit.void))
+          )
+        case "GetCurrent":
+          return Ref.get(stateRef).pipe(
+            Effect.exit,
+            Effect.map((result) => MessageState.Processed(result))
+          )
+      }
+    }
+  )
+).pipe(
+  Effect.zipRight(Sharding.registerScoped),
+  Layer.scopedDiscard,
+  Layer.provide(HttpLive),
+  Layer.provideMerge(Sharding.live),
+  Layer.provide(StorageFile.storageFile),
+  Layer.provide(PodsRpc.podsRpc<never>((podAddress) =>
+    HttpResolver.make<ShardingServiceRpc.ShardingServiceRpc>(
+      HttpClient.fetchOk.pipe(
+        HttpClient.mapRequest(
+          HttpClientRequest.prependUrl(`http://${podAddress.host}:${podAddress.port}/api/rest`)
+        )
+      )
+    ).pipe(Resolver.toClient)
+  )),
+  Layer.provide(ShardManagerClientRpc.shardManagerClientRpc(
+    (shardManagerUri) =>
+      HttpResolver.make<ShardingServiceRpc.ShardingServiceRpc>(
+        HttpClient.fetchOk.pipe(
+          HttpClient.mapRequest(
+            HttpClientRequest.prependUrl(shardManagerUri)
+          )
+        )
+      ).pipe(Resolver.toClient)
+  )),
+  Layer.provide(Serialization.json),
+  Layer.provide(NodeHttpClient.layerUndici),
+  Layer.provide(ShardingConfig.fromConfig)
+)
+
+Layer.launch(liveLayer).pipe(
+  Logger.withMinimumLogLevel(LogLevel.Debug),
+  Effect.tapErrorCause(Effect.logError),
+  NodeRuntime.runMain
+)
+
+```
+
+###### sample-manager.ts
+
+```typescript
+import * as PodsRpc from "@effect/cluster-node/PodsRpc"
+import type * as ShardingServiceRpc from "@effect/cluster-node/ShardingServiceRpc"
+import * as ShardManagerServiceRpc from "@effect/cluster-node/ShardManagerServiceRpc"
+import * as StorageFile from "@effect/cluster-node/StorageFile"
+import * as ManagerConfig from "@effect/cluster/ManagerConfig"
+import * as PodsHealth from "@effect/cluster/PodsHealth"
+import * as ShardManager from "@effect/cluster/ShardManager"
+import { HttpClient, HttpClientRequest, HttpMiddleware, HttpRouter, HttpServer } from "@effect/platform"
+import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
+import { Resolver } from "@effect/rpc"
+import { HttpResolver, HttpRouter as RpcHttpRouter } from "@effect/rpc-http"
+import { Context, Effect, Layer, Logger, LogLevel } from "effect"
+import { createServer } from "node:http"
+
+const HttpLive = Layer.flatMap(
+  Layer.effect(ManagerConfig.ManagerConfig, ManagerConfig.ManagerConfig),
+  (config) =>
+    HttpRouter.empty.pipe(
+      HttpRouter.post("/api/rest", RpcHttpRouter.toHttpApp(ShardManagerServiceRpc.router)),
+      HttpServer.serve(HttpMiddleware.logger),
+      HttpServer.withLogAddress,
+      Layer.provide(
+        NodeHttpServer.layer(createServer, {
+          port: Context.get(config, ManagerConfig.ManagerConfig).apiPort
+        })
+      ),
+      Layer.discard
+    )
+)
+
+const liveShardingManager = Effect.never.pipe(
+  Layer.scopedDiscard,
+  Layer.provide(HttpLive),
+  Layer.provide(ShardManager.live),
+  Layer.provide(StorageFile.storageFile),
+  Layer.provide(PodsHealth.local),
+  Layer.provide(PodsRpc.podsRpc<never>((podAddress) =>
+    HttpResolver.make<ShardingServiceRpc.ShardingServiceRpc>(
+      HttpClient.fetchOk.pipe(
+        HttpClient.mapRequest(
+          HttpClientRequest.prependUrl(`http://${podAddress.host}:${podAddress.port}/api/rest`)
+        )
+      )
+    ).pipe(Resolver.toClient)
+  )),
+  Layer.provide(ManagerConfig.fromConfig),
+  Layer.provide(HttpClient.layer)
+)
+
+Layer.launch(liveShardingManager).pipe(
+  Logger.withMinimumLogLevel(LogLevel.All),
+  Effect.tapErrorCause(Effect.logError),
+  NodeRuntime.runMain
 )
 
 ```
@@ -16743,13 +18160,13 @@ console.log(Doc.render(doc, { style: "pretty" }))
 
 ```typescript
 import * as DevTools from "@effect/experimental/DevTools"
-import * as Sql from "@effect/sql"
-import * as Mysql from "@effect/sql-mysql2"
-import { Config, Effect, FiberRef, FiberRefs, Layer, Option, Redacted, String } from "effect"
+import { SqlClient, Statement } from "@effect/sql"
+import { MysqlClient } from "@effect/sql-mysql2"
+import { Config, Effect, FiberRef, FiberRefs, Layer, Option, pipe, Redacted, String } from "effect"
 
 const currentResourceName = FiberRef.unsafeMake("")
 
-const SqlTracingLive = Sql.statement.setTransformer((prev, sql, refs, span) => {
+const SqlTracingLive = Statement.setTransformer((prev, sql, refs, span) => {
   const [query, params] = prev.compile()
   return sql.unsafe(
     `/* ${
@@ -16763,7 +18180,7 @@ const SqlTracingLive = Sql.statement.setTransformer((prev, sql, refs, span) => {
   )
 })
 
-const EnvLive = Mysql.client.layer({
+const EnvLive = MysqlClient.layer({
   database: Config.succeed("effect_dev"),
   username: Config.succeed("effect"),
   password: Config.succeed(Redacted.make("password")),
@@ -16774,9 +18191,9 @@ const EnvLive = Mysql.client.layer({
   Layer.provide(DevTools.layer())
 )
 
-const program = Effect.gen(function*(_) {
-  const sql = yield* _(Sql.client.Client)
-  yield* _(
+const program = Effect.gen(function*() {
+  const sql = yield* SqlClient.SqlClient
+  yield* pipe(
     sql`SELECT * FROM people`,
     Effect.replicateEffect(50),
     sql.withTransaction,
@@ -16803,28 +18220,28 @@ program.pipe(
 ```typescript
 import { BunFileSystem } from "@effect/platform-bun"
 import { FileSystem } from "@effect/platform/FileSystem"
-import * as Sqlite from "@effect/sql-sqlite-bun"
+import { SqliteClient } from "@effect/sql-sqlite-bun"
 import { describe, expect, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, pipe } from "effect"
 
-const makeClient = Effect.gen(function*(_) {
-  const fs = yield* _(FileSystem)
-  const dir = yield* _(fs.makeTempDirectoryScoped())
-  return yield* _(Sqlite.client.make({
+const makeClient = Effect.gen(function*() {
+  const fs = yield* FileSystem
+  const dir = yield* fs.makeTempDirectoryScoped()
+  return yield* SqliteClient.make({
     filename: dir + "/test.db"
-  }))
+  })
 }).pipe(Effect.provide(BunFileSystem.layer))
 
 describe("Client", () => {
   test("works", () =>
-    Effect.gen(function*(_) {
-      const sql = yield* _(makeClient)
-      yield* _(sql`CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)`)
-      yield* _(sql`INSERT INTO test (name) VALUES ('hello')`)
-      let rows = yield* _(sql`SELECT * FROM test`)
+    Effect.gen(function*() {
+      const sql = yield* makeClient
+      yield* sql`CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)`
+      yield* sql`INSERT INTO test (name) VALUES ('hello')`
+      let rows = yield* sql`SELECT * FROM test`
       expect(rows).toEqual([{ id: 1, name: "hello" }])
-      yield* _(sql`INSERT INTO test (name) VALUES ('world')`, sql.withTransaction)
-      rows = yield* _(sql`SELECT * FROM test`)
+      yield* pipe(sql`INSERT INTO test (name) VALUES ('world')`, sql.withTransaction)
+      rows = yield* sql`SELECT * FROM test`
       expect(rows).toEqual([
         { id: 1, name: "hello" },
         { id: 2, name: "world" }

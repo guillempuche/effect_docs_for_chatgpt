@@ -50,9 +50,9 @@ This command will convert the Markdown files found in the `../website/content/do
 If all repositories are cloned under your home directory, the command would look like this:
 
 ```bash
-deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http md output <-- It will generate "output.md"
-deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http pdf <-- It will generate "documentation.pdf"
-deno task generate-pdf ~/website/content/docs ~/effect ~/effect-http <-- It will generate "documentation.pdf"
+deno task generate-pdf ../website/content/docs ../effect ../effect-http md output <-- It will generate "output.md"
+deno task generate-pdf ../website/content/docs ../effect ../effect-http pdf <-- It will generate "documentation.pdf"
+deno task generate-pdf ../website/content/docs ../effect ../effect-http <-- It will generate "documentation.pdf"
 ```
 
 ## Additional Commands
